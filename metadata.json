@@ -1,0 +1,6 @@
+{
+  "name": "NetShield Pro",
+  "description": "Quantum-safe mobile network security and intrusion detection with exponential backoff network resilience.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
