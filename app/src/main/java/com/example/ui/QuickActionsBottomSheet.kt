@@ -72,6 +72,12 @@ fun QuickActionsBottomSheet(
     onToggleIds: () -> Unit,
     isTorEnabled: Boolean,
     onToggleTor: () -> Unit,
+    isQuantumEnabled: Boolean = true,
+    onToggleQuantum: () -> Unit = {},
+    isAutoBlockEnabled: Boolean = true,
+    onToggleAutoBlock: () -> Unit = {},
+    isGpuCryptoEnabled: Boolean = true,
+    onToggleGpuCrypto: () -> Unit = {},
     alertCacheCount: Int,
     onClearAlertCache: () -> Unit,
     onDismiss: () -> Unit
@@ -288,7 +294,214 @@ fun QuickActionsBottomSheet(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Action 3: Clear Alert Cache Button
+            // Action 3: Quantum-Safe Encryption Protocols Switch
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.outlinedCardColors(containerColor = innerCardBg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (isQuantumEnabled) Color(0xFF6B21A8) else Color(0xFF334155)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Key,
+                                contentDescription = null,
+                                tint = if (isQuantumEnabled) Color(0xFFE9D5FF) else Color(0xFF94A3B8),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "Quantum-Safe Encryption",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    color = textColorPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (isQuantumEnabled) "Active: ML-KEM-1024 post-quantum TLS 1.3" else "Disabled: Classical RSA/ECC fallback mode",
+                                style = MaterialTheme.typography.bodySmall.copy(color = textColorSecondary, fontSize = 11.sp)
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = isQuantumEnabled,
+                        onCheckedChange = {
+                            onToggleQuantum()
+                            Toast.makeText(
+                                context,
+                                if (!isQuantumEnabled) "Quantum-Safe Protocols Enabled" else "Quantum Encryption Disabled",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFFA855F7)
+                        ),
+                        modifier = Modifier.testTag("quick_sheet_quantum_switch")
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Action 4: Dual-LLM Auto Firewall Switch
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.outlinedCardColors(containerColor = innerCardBg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (isAutoBlockEnabled) Color(0xFF065F46) else Color(0xFF334155)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = if (isAutoBlockEnabled) Color(0xFFA7F3D0) else Color(0xFF94A3B8),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "Dual-LLM Auto Firewall",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    color = textColorPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (isAutoBlockEnabled) "Active: Auto-block malicious IPs with iptables/eBPF" else "Paused: Manual confirmation required for IP blocks",
+                                style = MaterialTheme.typography.bodySmall.copy(color = textColorSecondary, fontSize = 11.sp)
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = isAutoBlockEnabled,
+                        onCheckedChange = {
+                            onToggleAutoBlock()
+                            Toast.makeText(
+                                context,
+                                if (!isAutoBlockEnabled) "Dual-LLM Auto Firewall Enabled" else "Auto Firewall Block Paused",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF10B981)
+                        ),
+                        modifier = Modifier.testTag("quick_sheet_autoblock_switch")
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Action 5: GPU & Shader Encryption Offload Switch
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.outlinedCardColors(containerColor = innerCardBg),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (isGpuCryptoEnabled) Color(0xFF0284C7) else Color(0xFF334155)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Bolt,
+                                contentDescription = null,
+                                tint = if (isGpuCryptoEnabled) Color(0xFFE0F2FE) else Color(0xFF94A3B8),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "GPU Crypto Acceleration",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    color = textColorPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (isGpuCryptoEnabled) "Active: Vulkan 1.3 GPGPU shader offload for ML-KEM" else "Disabled: Pure CPU thread execution",
+                                style = MaterialTheme.typography.bodySmall.copy(color = textColorSecondary, fontSize = 11.sp)
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = isGpuCryptoEnabled,
+                        onCheckedChange = {
+                            onToggleGpuCrypto()
+                            Toast.makeText(
+                                context,
+                                if (!isGpuCryptoEnabled) "GPU Acceleration Enabled" else "GPU Acceleration Disabled",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF0284C7)
+                        ),
+                        modifier = Modifier.testTag("quick_sheet_gpu_switch")
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Action 6: Clear Alert Cache Button
             OutlinedCard(
                 modifier = Modifier
                     .fillMaxWidth()

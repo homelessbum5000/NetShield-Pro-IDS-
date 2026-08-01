@@ -14,6 +14,9 @@ interface ThreatLogDao {
     @Query("SELECT * FROM threat_logs WHERE severity = :severity ORDER BY timestampMs DESC")
     fun getLogsBySeverity(severity: String): Flow<List<ThreatLogEntity>>
 
+    @Query("SELECT * FROM threat_logs WHERE attackVector = :threatType ORDER BY timestampMs DESC")
+    fun getLogsByThreatType(threatType: String): Flow<List<ThreatLogEntity>>
+
     @Query("SELECT COUNT(*) FROM threat_logs")
     fun getLogCount(): Flow<Int>
 

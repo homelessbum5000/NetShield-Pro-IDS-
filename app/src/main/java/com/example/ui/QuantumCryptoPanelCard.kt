@@ -73,8 +73,11 @@ data class PqcAlgorithmInfo(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun QuantumCryptoPanelCard() {
-    var isPqcEnabled by remember { mutableStateOf(true) }
+fun QuantumCryptoPanelCard(
+    isQuantumEncryptionEnabled: Boolean = true,
+    onToggleQuantumEncryption: (Boolean) -> Unit = {}
+) {
+    var isPqcEnabled by remember(isQuantumEncryptionEnabled) { mutableStateOf(isQuantumEncryptionEnabled) }
     var isHybridModeActive by remember { mutableStateOf(true) }
 
     val kemAlgorithms = remember {
@@ -242,11 +245,15 @@ fun QuantumCryptoPanelCard() {
                 }
                 Switch(
                     checked = isPqcEnabled,
-                    onCheckedChange = { isPqcEnabled = it },
+                    onCheckedChange = {
+                        isPqcEnabled = it
+                        onToggleQuantumEncryption(it)
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = Color(0xFFA855F7)
-                    )
+                    ),
+                    modifier = Modifier.testTag("quantum_encryption_switch")
                 )
             }
 

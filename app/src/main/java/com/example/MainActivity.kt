@@ -101,6 +101,20 @@ import com.example.ui.GeoThreatHeatMapCard
 import com.example.ui.QuantumTunnelHealthWidgetCard
 import com.example.ui.ThemeManagerCard
 import com.example.ui.QuickActionsBottomSheet
+import com.example.ui.RecentThreatsRoomScreen
+import com.example.ui.ThreatDensityHeatmapCard
+import com.example.ui.DualLlmFirewallCard
+import com.example.ui.HardwareAcceleratorCard
+import com.example.ui.LlmAutoDebuggerCard
+import com.example.ui.NetworkTrafficLogViewModel
+import com.example.ui.NetworkTrafficLoggerCard
+import com.example.ui.PerAppFirewallCard
+import com.example.ui.PiHoleIpBlockerCard
+import com.example.ui.CustomEncryptedDnsCard
+import com.example.ui.DualLlmPersistentSettingsCard
+import com.example.ui.WifiSecurityInspectorCard
+import com.example.ui.DpiProtocolFilterCard
+import com.example.ui.SecurityAutomationRulesCard
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bolt
@@ -148,7 +162,39 @@ fun NetShieldApp(
 
     val isIdsEnabled by viewModel.isIdsEngineEnabled.collectAsStateWithLifecycle()
     val isTorEnabled by viewModel.isTorRoutingEnabled.collectAsStateWithLifecycle()
+    val isQuantumEnabled by viewModel.isQuantumEncryptionEnabled.collectAsStateWithLifecycle()
+    val isAutoBlockEnabled by viewModel.isAutoFirewallBlockEnabled.collectAsStateWithLifecycle()
+    val blockedRules by viewModel.blockedFirewallRules.collectAsStateWithLifecycle()
+    val dualLlmScanState by viewModel.dualLlmScanState.collectAsStateWithLifecycle()
+    val isGpuCryptoEnabled by viewModel.isGpuCryptoAccelEnabled.collectAsStateWithLifecycle()
+    val isNpuNeuralEnabled by viewModel.isNpuNeuralAccelEnabled.collectAsStateWithLifecycle()
+    val isArmNeonEnabled by viewModel.isArmNeonVectorEnabled.collectAsStateWithLifecycle()
+    val selectedCpuProfile by viewModel.selectedCpuProfile.collectAsStateWithLifecycle()
+    val hardwareDeviceInfo by viewModel.hardwareDeviceInfo.collectAsStateWithLifecycle()
+    val hardwareOffloadMetrics by viewModel.hardwareOffloadMetrics.collectAsStateWithLifecycle()
+    val hwBenchmarkState by viewModel.hwBenchmarkState.collectAsStateWithLifecycle()
+    val startupHwCheckState by viewModel.startupHwCheckState.collectAsStateWithLifecycle()
+    val llmDebugState by viewModel.llmDebugState.collectAsStateWithLifecycle()
+    val llmCustomDebug by viewModel.llmCustomDebug.collectAsStateWithLifecycle()
+    val powerSavingState by viewModel.powerSavingState.collectAsStateWithLifecycle()
+    val isDualLlmEngineEnabled by viewModel.isDualLlmEngineEnabled.collectAsStateWithLifecycle()
     val alertCacheCount by viewModel.alertCacheCount.collectAsStateWithLifecycle()
+    val dbThreatLogs by viewModel.dbThreatLogs.collectAsStateWithLifecycle()
+    val appRules by viewModel.appFirewallRules.collectAsStateWithLifecycle()
+    val piHoleRules by viewModel.piHoleRules.collectAsStateWithLifecycle()
+    val piHoleBlocklists by viewModel.piHoleBlocklists.collectAsStateWithLifecycle()
+    val encryptedDnsState by viewModel.encryptedDnsState.collectAsStateWithLifecycle()
+    val wifiSecurityState by viewModel.wifiSecurityState.collectAsStateWithLifecycle()
+    val isWifiScanning by viewModel.isWifiScanning.collectAsStateWithLifecycle()
+    val dpiRules by viewModel.dpiRules.collectAsStateWithLifecycle()
+    val automationRules by viewModel.automationRules.collectAsStateWithLifecycle()
+
+    val trafficLogViewModel: NetworkTrafficLogViewModel = viewModel()
+    val trafficLogs by trafficLogViewModel.filteredTrafficLogs.collectAsStateWithLifecycle()
+    val totalTrafficCount by trafficLogViewModel.totalLogCount.collectAsStateWithLifecycle()
+    val highRiskTrafficCount by trafficLogViewModel.highRiskThreatCount.collectAsStateWithLifecycle()
+    val selectedThreatFilter by trafficLogViewModel.selectedThreatFilter.collectAsStateWithLifecycle()
+    val isSimulatingTraffic by trafficLogViewModel.isSimulatingCapture.collectAsStateWithLifecycle()
 
     var showQuickActionsSheet by remember { mutableStateOf(false) }
 
@@ -239,6 +285,12 @@ fun NetShieldApp(
                 onToggleIds = { viewModel.toggleIdsEngine() },
                 isTorEnabled = isTorEnabled,
                 onToggleTor = { viewModel.toggleTorRouting() },
+                isQuantumEnabled = isQuantumEnabled,
+                onToggleQuantum = { viewModel.toggleQuantumEncryption() },
+                isAutoBlockEnabled = isAutoBlockEnabled,
+                onToggleAutoBlock = { viewModel.toggleAutoFirewallBlock() },
+                isGpuCryptoEnabled = isGpuCryptoEnabled,
+                onToggleGpuCrypto = { viewModel.toggleGpuCryptoAccel() },
                 alertCacheCount = alertCacheCount,
                 onClearAlertCache = { viewModel.clearAlertCache() },
                 onDismiss = { showQuickActionsSheet = false }
@@ -282,6 +334,21 @@ fun NetShieldApp(
                 SecurityOverviewDashboardCard()
             }
 
+            // Recent Network Threats (Room Database Live Persistence Screen)
+            item {
+                RecentThreatsRoomScreen(
+                    threatLogs = dbThreatLogs,
+                    onSimulateThreat = { viewModel.simulateNewThreat() },
+                    onClearLogs = { viewModel.clearAlertCache() },
+                    onDeleteLog = { id -> viewModel.deleteThreatLogById(id) }
+                )
+            }
+
+            // Visual Threat Density Temporal Heatmap Dashboard
+            item {
+                ThreatDensityHeatmapCard(threatLogs = dbThreatLogs)
+            }
+
             // Real-Time IDS Anomaly Spider/Radar Chart Dashboard
             item {
                 ThreatSpiderChartDashboardCard()
@@ -302,9 +369,163 @@ fun NetShieldApp(
                 SafeHostWhitelistCard()
             }
 
+            // Per-App Network Rules (Allow or Deny Any App) Card
+            item {
+                PerAppFirewallCard(
+                    appRules = appRules,
+                    onUpdateStatus = { pkg, st -> viewModel.updateAppRuleStatus(pkg, st) },
+                    onAddCustomApp = { name, pkg, st -> viewModel.addCustomAppRule(name, pkg, st) },
+                    onDeleteApp = { pkg -> viewModel.deleteAppRule(pkg) },
+                    onBatchSet = { denySys -> viewModel.setBatchAppRules(denySys) }
+                )
+            }
+
+            // Pi-hole Style IP & Domain Sinkhole Blocker Card
+            item {
+                PiHoleIpBlockerCard(
+                    piHoleRules = piHoleRules,
+                    blocklists = piHoleBlocklists,
+                    onAddRule = { target, action, category -> viewModel.addPiHoleRule(target, action, category) },
+                    onToggleRule = { id, enabled -> viewModel.togglePiHoleRule(id, enabled) },
+                    onDeleteRule = { id -> viewModel.deletePiHoleRule(id) },
+                    onToggleBlocklist = { id, enabled -> viewModel.togglePiHoleBlocklist(id, enabled) }
+                )
+            }
+
+            // Custom & Encrypted DNS Engine Card (DoH, DoT, DoQ, DNSCrypt, TOR, ODoH)
+            item {
+                CustomEncryptedDnsCard(
+                    dnsState = encryptedDnsState,
+                    onSetProtocol = { proto -> viewModel.setDnsProtocol(proto) },
+                    onSetPreset = { preset, prim, sec, doh, dot -> viewModel.setDnsPreset(preset, prim, sec, doh, dot) },
+                    onUpdateCustomDns = { prim, sec, doh, dot, dnscrypt -> viewModel.updateCustomDnsServers(prim, sec, doh, dot, dnscrypt) },
+                    onToggleLeakProtection = { enabled -> viewModel.toggleDnsLeakProtection(enabled) },
+                    onToggleDnsSec = { enabled -> viewModel.toggleDnsSecValidation(enabled) },
+                    onToggleFallback = { enabled -> viewModel.toggleAllowFallbackToPlaintext(enabled) },
+                    onRunDiagnosticTest = { viewModel.runDnsDiagnosticTest() }
+                )
+            }
+
+            // Wi-Fi & MitM Security Guard Card
+            item {
+                WifiSecurityInspectorCard(
+                    wifiState = wifiSecurityState,
+                    isScanning = isWifiScanning,
+                    onRunAudit = { viewModel.runWifiSecurityAudit() }
+                )
+            }
+
+            // DPI Payload & SNI Sanitizer Filter Card
+            item {
+                DpiProtocolFilterCard(
+                    dpiRules = dpiRules,
+                    onToggleRule = { id, enabled -> viewModel.toggleDpiRule(id, enabled) },
+                    onAddRule = { name, proto, action, pattern -> viewModel.addDpiRule(name, proto, action, pattern) },
+                    onDeleteRule = { id -> viewModel.deleteDpiRule(id) }
+                )
+            }
+
+            // Automated Defense Trigger Rules Card
+            item {
+                SecurityAutomationRulesCard(
+                    automationRules = automationRules,
+                    onToggleRule = { id, enabled -> viewModel.toggleAutomationRule(id, enabled) },
+                    onAddRule = { cond, act -> viewModel.addAutomationRule(cond, act) },
+                    onDeleteRule = { id -> viewModel.deleteAutomationRule(id) }
+                )
+            }
+
+            // Persistent Settings Toggle for Dual-LLM Analysis Engine
+            item {
+                DualLlmPersistentSettingsCard(
+                    isEngineEnabled = isDualLlmEngineEnabled,
+                    onToggleEngine = { viewModel.toggleDualLlmEngine(it) },
+                    powerSavingState = powerSavingState,
+                    onSetLlmIntensity = { viewModel.setDualLlmIntensity(it) }
+                )
+            }
+
             // Dual-LLM Power & Battery Impact Monitor Card
             item {
-                LlmBatteryMonitorCard()
+                LlmBatteryMonitorCard(
+                    powerSavingState = powerSavingState,
+                    onTogglePowerSavingMode = { viewModel.togglePowerSavingMode(it) },
+                    onToggleAutoBatterySync = { viewModel.toggleAutoBatterySync(it) },
+                    onToggleDualLlmEngine = { viewModel.toggleDualLlmEngine(it) },
+                    onSetBatteryLevel = { viewModel.setSimulatedBatteryLevel(it) },
+                    onSetThreshold = { viewModel.setAutoSavingsThreshold(it) },
+                    onSetEncryptionMode = { viewModel.setEncryptionEngineMode(it) },
+                    onSetLlmIntensity = { viewModel.setDualLlmIntensity(it) }
+                )
+            }
+
+            // Room Database Network Traffic Logs Card for Intrusion Detection
+            item {
+                NetworkTrafficLoggerCard(
+                    trafficLogs = trafficLogs,
+                    totalLogCount = totalTrafficCount,
+                    highRiskCount = highRiskTrafficCount,
+                    selectedFilter = selectedThreatFilter,
+                    isSimulating = isSimulatingTraffic,
+                    onSetFilter = { trafficLogViewModel.setThreatFilter(it) },
+                    onSimulateBurst = { trafficLogViewModel.simulateIntrusionCaptureBurst() },
+                    onAddCustomLog = { srcIp, srcPort, dstIp, dstPort, proto, level, cat, act, payload ->
+                        trafficLogViewModel.captureCustomPacket(srcIp, srcPort, dstIp, dstPort, proto, level, cat, act, payload)
+                    },
+                    onDeleteLog = { trafficLogViewModel.deleteLogById(it) },
+                    onClearAll = { trafficLogViewModel.clearAllLogs() }
+                )
+            }
+
+            // Dual-LLM Auto-Firewall Threat Blocking Engine Card
+            item {
+                DualLlmFirewallCard(
+                    isAutoBlockEnabled = isAutoBlockEnabled,
+                    onToggleAutoBlock = { viewModel.toggleAutoFirewallBlock() },
+                    isDualLlmEngineEnabled = isDualLlmEngineEnabled,
+                    onToggleDualLlmEngine = { viewModel.toggleDualLlmEngine(it) },
+                    blockedRules = blockedRules,
+                    scanState = dualLlmScanState,
+                    onRunScan = { ip -> viewModel.runDualLlmScanAndBlock(ip) },
+                    onResetScan = { viewModel.resetDualLlmScanState() },
+                    onUnblockIp = { ip -> viewModel.unblockFirewallIp(ip) },
+                    onAddManualBlock = { ip, reason -> viewModel.addManualFirewallRule(ip, reason) },
+                    onClearAllRules = { viewModel.clearAllFirewallRules() }
+                )
+            }
+
+            // Gemini System Self-Healing & LLM Auto-Debugger Card
+            item {
+                LlmAutoDebuggerCard(
+                    diagnosticsState = llmDebugState,
+                    customDebugResult = llmCustomDebug,
+                    onRunDiagnostics = { viewModel.runLlmDiagnosticsAndHealing() },
+                    onApplyAutoFix = { viewModel.applyLlmSystemAutoFix() },
+                    onResetDiagnostics = { viewModel.resetLlmDebugDiagnostics() },
+                    onSubmitCustomQuery = { query -> viewModel.submitCustomLlmDebugQuery(query) },
+                    onClearCustomQuery = { viewModel.clearCustomLlmDebug() }
+                )
+            }
+
+            // CPU & GPU Hardware Offload Engine Card (Snapdragon / Dimensity / Tensor TPU / Vulkan Compute)
+            item {
+                HardwareAcceleratorCard(
+                    isGpuCryptoEnabled = isGpuCryptoEnabled,
+                    onToggleGpuCrypto = { viewModel.toggleGpuCryptoAccel() },
+                    isNpuNeuralEnabled = isNpuNeuralEnabled,
+                    onToggleNpuNeural = { viewModel.toggleNpuNeuralAccel() },
+                    isArmNeonEnabled = isArmNeonEnabled,
+                    onToggleArmNeon = { viewModel.toggleArmNeonVector() },
+                    selectedCpuProfile = selectedCpuProfile,
+                    onSelectCpuProfile = { profile -> viewModel.selectCpuProfile(profile) },
+                    deviceInfo = hardwareDeviceInfo,
+                    metrics = hardwareOffloadMetrics,
+                    benchmarkState = hwBenchmarkState,
+                    onRunBenchmark = { viewModel.runHardwareBenchmark() },
+                    onResetBenchmark = { viewModel.resetHwBenchmark() },
+                    startupHwCheckState = startupHwCheckState,
+                    onReRunStartupCheck = { viewModel.performStartupHardwareProbe() }
+                )
             }
 
             // Gemini Weekly Security Digest & Hardening Recommendation Card
@@ -334,7 +555,10 @@ fun NetShieldApp(
 
             // Post-Quantum Cryptographic (PQC) Protocol Selector Panel
             item {
-                QuantumCryptoPanelCard()
+                QuantumCryptoPanelCard(
+                    isQuantumEncryptionEnabled = isQuantumEnabled,
+                    onToggleQuantumEncryption = { enabled -> viewModel.setQuantumEncryption(enabled) }
+                )
             }
 
             // Exponential Backoff Configurator

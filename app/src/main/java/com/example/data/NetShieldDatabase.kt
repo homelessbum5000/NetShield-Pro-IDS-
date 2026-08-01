@@ -6,14 +6,15 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ThreatLogEntity::class, PacketAnalysisEntity::class],
-    version = 1,
+    entities = [ThreatLogEntity::class, PacketAnalysisEntity::class, NetworkTrafficLogEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class NetShieldDatabase : RoomDatabase() {
 
     abstract fun threatLogDao(): ThreatLogDao
     abstract fun packetAnalysisDao(): PacketAnalysisDao
+    abstract fun networkTrafficLogDao(): NetworkTrafficLogDao
 
     companion object {
         @Volatile
