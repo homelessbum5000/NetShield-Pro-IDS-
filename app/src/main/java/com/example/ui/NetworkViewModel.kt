@@ -8,6 +8,9 @@ import com.example.data.NetShieldDatabase
 import com.example.data.PacketAnalysisEntity
 import com.example.data.ThreatLogEntity
 import com.example.data.ThreatRepository
+import com.example.data.RoomAesGcmCryptoManager
+import com.example.data.AesGcmSecurityProfile
+import com.example.data.AesGcmBenchmarkResult
 import com.example.network.EncryptedIDSRequest
 import com.example.network.NetworkConnectivityManager
 import com.example.network.NetworkStatus
@@ -321,10 +324,18 @@ sealed class SqdExecutionState {
 
 class NetworkViewModel(application: Application) : AndroidViewModel(application) {
 
+    val cryptoManager = RoomAesGcmCryptoManager.getInstance(application)
     private val db = NetShieldDatabase.getInstance(application)
-    val threatRepository = ThreatRepository(db.threatLogDao(), db.packetAnalysisDao())
+    val threatRepository = ThreatRepository(db.threatLogDao(), db.packetAnalysisDao(), cryptoManager)
 
     val dbThreatLogs: StateFlow<List<ThreatLogEntity>> = threatRepository.allThreatLogs
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val dbRawEncryptedLogs: StateFlow<List<ThreatLogEntity>> = threatRepository.allRawEncryptedLogs
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -337,6 +348,27 @@ class NetworkViewModel(application: Application) : AndroidViewModel(application)
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    private val _cryptoProfile = MutableStateFlow(cryptoManager.getSecurityProfile())
+    val cryptoProfile: StateFlow<AesGcmSecurityProfile> = _cryptoProfile.asStateFlow()
+
+    private val _cryptoBenchmarkResult = MutableStateFlow(cryptoManager.runCryptographicBenchmark())
+    val cryptoBenchmarkResult: StateFlow<AesGcmBenchmarkResult> = _cryptoBenchmarkResult.asStateFlow()
+
+    fun runAesGcmBenchmark(customInput: String = "185.220.101.5:443 - SYN-Flood Volumetric Burst") {
+        viewModelScope.launch(Dispatchers.Default) {
+            val result = cryptoManager.runCryptographicBenchmark(customInput)
+            _cryptoBenchmarkResult.value = result
+        }
+    }
+
+    fun rotateRoomAesGcmMasterKey() {
+        viewModelScope.launch(Dispatchers.IO) {
+            cryptoManager.rotateMasterKey()
+            _cryptoProfile.value = cryptoManager.getSecurityProfile()
+            _cryptoBenchmarkResult.value = cryptoManager.runCryptographicBenchmark()
+        }
+    }
 
     private val connectivityManager = NetworkConnectivityManager(application)
     val networkStatus: StateFlow<NetworkStatus> = connectivityManager.networkStatus

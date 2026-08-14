@@ -175,35 +175,52 @@ fun RecentThreatsRoomScreen(
                 }
 
                 // Room Database Status Chip
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = Color(0xFF10B981).copy(alpha = 0.15f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.4f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                Column(horizontalAlignment = Alignment.End) {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color(0xFF10B981).copy(alpha = 0.15f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.4f))
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF10B981))
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.Storage,
-                            contentDescription = null,
-                            tint = Color(0xFF10B981),
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF10B981))
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Storage,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "ROOM DB (${threatLogs.size})",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Color(0xFF10B981),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = Color(0xFF064E3B)
+                    ) {
                         Text(
-                            text = "ROOM DB (${threatLogs.size})",
+                            text = "AES-256-GCM AT REST",
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFF10B981),
+                                color = Color(0xFF6EE7B7),
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp
+                                fontSize = 8.sp
                             )
                         )
                     }

@@ -102,6 +102,7 @@ import com.example.ui.QuantumTunnelHealthWidgetCard
 import com.example.ui.ThemeManagerCard
 import com.example.ui.QuickActionsBottomSheet
 import com.example.ui.RecentThreatsRoomScreen
+import com.example.ui.RoomAesGcmSecurityCard
 import com.example.ui.ThreatDensityHeatmapCard
 import com.example.ui.DualLlmFirewallCard
 import com.example.ui.HardwareAcceleratorCard
@@ -119,7 +120,12 @@ import com.example.ui.SampleBasedQuantumDiagonalizationCard
 import com.example.ui.ThreatIntensityCanvasCard
 import com.example.ui.CudaQAcademicStudioCard
 import com.example.ui.QuantumEncryptionStatusIndicatorCard
+import com.example.ui.QuantumStatusBarNotificationCard
+import com.example.ui.NgfwEnterpriseCommandCenterCard
 import com.example.ui.NvidiaDpuAcceleratedSecurityCard
+import com.example.ui.QuantumHandshakeSpeedTimelineCard
+import com.example.network.QuantumTunnelStatusManager
+import com.example.network.QuantumTunnelNotificationService
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bolt
@@ -131,6 +137,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        QuantumTunnelStatusManager.init(this)
+        QuantumTunnelNotificationService.start(this)
         setContent {
             val viewModel: NetworkViewModel = viewModel()
             val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
@@ -185,6 +193,9 @@ fun NetShieldApp(
     val isDualLlmEngineEnabled by viewModel.isDualLlmEngineEnabled.collectAsStateWithLifecycle()
     val alertCacheCount by viewModel.alertCacheCount.collectAsStateWithLifecycle()
     val dbThreatLogs by viewModel.dbThreatLogs.collectAsStateWithLifecycle()
+    val dbRawEncryptedLogs by viewModel.dbRawEncryptedLogs.collectAsStateWithLifecycle()
+    val cryptoProfile by viewModel.cryptoProfile.collectAsStateWithLifecycle()
+    val cryptoBenchmarkResult by viewModel.cryptoBenchmarkResult.collectAsStateWithLifecycle()
     val appRules by viewModel.appFirewallRules.collectAsStateWithLifecycle()
     val piHoleRules by viewModel.piHoleRules.collectAsStateWithLifecycle()
     val piHoleBlocklists by viewModel.piHoleBlocklists.collectAsStateWithLifecycle()
@@ -324,6 +335,21 @@ fun NetShieldApp(
                 )
             }
 
+            // Persistent Status Bar Notification & Quick Control Widget
+            item {
+                QuantumStatusBarNotificationCard()
+            }
+
+            // Next-Generation Firewall (NGFW) Enterprise Command Center
+            item {
+                NgfwEnterpriseCommandCenterCard()
+            }
+
+            // Real-Time Recharts Line Graph: Quantum-Safe Handshake Speed & Latency Fluctuations (Last 1 Hour)
+            item {
+                QuantumHandshakeSpeedTimelineCard()
+            }
+
             // System-Wide Theme Manager & Display Control Card
             item {
                 ThemeManagerCard(
@@ -346,6 +372,18 @@ fun NetShieldApp(
             // Security Overview Dashboard: Quantum Risk Index & Real-Time Traffic Overlay
             item {
                 SecurityOverviewDashboardCard()
+            }
+
+            // AES-256-GCM Database At-Rest Encryption & Cryptographic Inspector Card
+            item {
+                RoomAesGcmSecurityCard(
+                    securityProfile = cryptoProfile,
+                    benchmarkResult = cryptoBenchmarkResult,
+                    decryptedLogs = dbThreatLogs,
+                    rawEncryptedLogs = dbRawEncryptedLogs,
+                    onRunBenchmark = { payload -> viewModel.runAesGcmBenchmark(payload) },
+                    onRotateMasterKey = { viewModel.rotateRoomAesGcmMasterKey() }
+                )
             }
 
             // Recent Network Threats (Room Database Live Persistence Screen)
