@@ -116,6 +116,10 @@ import com.example.ui.WifiSecurityInspectorCard
 import com.example.ui.DpiProtocolFilterCard
 import com.example.ui.SecurityAutomationRulesCard
 import com.example.ui.SampleBasedQuantumDiagonalizationCard
+import com.example.ui.ThreatIntensityCanvasCard
+import com.example.ui.CudaQAcademicStudioCard
+import com.example.ui.QuantumEncryptionStatusIndicatorCard
+import com.example.ui.NvidiaDpuAcceleratedSecurityCard
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bolt
@@ -312,6 +316,14 @@ fun NetShieldApp(
                 ConnectivityStatusCard(networkStatus = networkStatus)
             }
 
+            // Real-Time Quantum-Safe Encryption Status Indicator Component
+            item {
+                QuantumEncryptionStatusIndicatorCard(
+                    isQuantumEncryptionEnabled = isQuantumEnabled,
+                    onToggleQuantumEncryption = { enabled -> viewModel.setQuantumEncryption(enabled) }
+                )
+            }
+
             // System-Wide Theme Manager & Display Control Card
             item {
                 ThemeManagerCard(
@@ -479,6 +491,13 @@ fun NetShieldApp(
                 )
             }
 
+            // Real-Time Threat Intensity Levels Over Time Canvas Visualization Card
+            item {
+                ThreatIntensityCanvasCard(
+                    capturedThreatCount = totalTrafficCount
+                )
+            }
+
             // Dual-LLM Auto-Firewall Threat Blocking Engine Card
             item {
                 DualLlmFirewallCard(
@@ -530,6 +549,11 @@ fun NetShieldApp(
                 )
             }
 
+            // NVIDIA BlueField DPU Accelerated Security Integrations (Check Point, Cisco, Palo Alto)
+            item {
+                NvidiaDpuAcceleratedSecurityCard()
+            }
+
             // Gemini Weekly Security Digest & Hardening Recommendation Card
             item {
                 SecurityDigestCard()
@@ -573,6 +597,11 @@ fun NetShieldApp(
                     onGenerateJsonExport = { completed -> viewModel.generateSqdJsonExport(completed) },
                     onGenerateCsvExport = { completed -> viewModel.generateSqdCsvExport(completed) }
                 )
+            }
+
+            // NVIDIA CUDA-Q Academic Studio & Self-Paced Jupyter Notebook Modules
+            item {
+                CudaQAcademicStudioCard()
             }
 
             // Exponential Backoff Configurator
