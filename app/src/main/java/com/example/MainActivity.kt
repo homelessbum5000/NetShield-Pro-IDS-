@@ -115,6 +115,7 @@ import com.example.ui.DualLlmPersistentSettingsCard
 import com.example.ui.WifiSecurityInspectorCard
 import com.example.ui.DpiProtocolFilterCard
 import com.example.ui.SecurityAutomationRulesCard
+import com.example.ui.SampleBasedQuantumDiagonalizationCard
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bolt
@@ -188,6 +189,7 @@ fun NetShieldApp(
     val isWifiScanning by viewModel.isWifiScanning.collectAsStateWithLifecycle()
     val dpiRules by viewModel.dpiRules.collectAsStateWithLifecycle()
     val automationRules by viewModel.automationRules.collectAsStateWithLifecycle()
+    val sqdState by viewModel.sqdExecutionState.collectAsStateWithLifecycle()
 
     val trafficLogViewModel: NetworkTrafficLogViewModel = viewModel()
     val trafficLogs by trafficLogViewModel.filteredTrafficLogs.collectAsStateWithLifecycle()
@@ -558,6 +560,18 @@ fun NetShieldApp(
                 QuantumCryptoPanelCard(
                     isQuantumEncryptionEnabled = isQuantumEnabled,
                     onToggleQuantumEncryption = { enabled -> viewModel.setQuantumEncryption(enabled) }
+                )
+            }
+
+            // Sample-based Quantum Diagonalization (SQD) Classical Postprocessing Card
+            item {
+                SampleBasedQuantumDiagonalizationCard(
+                    sqdState = sqdState,
+                    onRunSqd = { target, shots, noise, k, krylov, zneEnabled, zneModel, liveEntropy ->
+                        viewModel.runSampleBasedQuantumDiagonalization(target, shots, noise, k, krylov, zneEnabled, zneModel, liveEntropy)
+                    },
+                    onGenerateJsonExport = { completed -> viewModel.generateSqdJsonExport(completed) },
+                    onGenerateCsvExport = { completed -> viewModel.generateSqdCsvExport(completed) }
                 )
             }
 
