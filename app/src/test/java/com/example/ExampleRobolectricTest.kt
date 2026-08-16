@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.RoomAesGcmCryptoManager
 import com.example.data.ThreatLogEntity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -81,6 +82,7 @@ class ExampleRobolectricTest {
   fun `quantum tunnel status manager notification building and toggle test`() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     com.example.network.QuantumTunnelStatusManager.init(context)
+    com.example.network.QuantumTunnelStatusManager.setProtectionEnabled(context, true)
 
     val stateInitial = com.example.network.QuantumTunnelStatusManager.state.value
     assertTrue(stateInitial.isProtectionEnabled)
@@ -100,6 +102,7 @@ class ExampleRobolectricTest {
   @Test
   fun `quantum tunnel action receiver toggle intent test`() {
     val context = ApplicationProvider.getApplicationContext<Context>()
+    com.example.network.QuantumTunnelStatusManager.setProtectionEnabled(context, true)
     val receiver = com.example.network.QuantumTunnelActionReceiver()
 
     val toggleIntent = android.content.Intent().apply {
@@ -137,6 +140,70 @@ class ExampleRobolectricTest {
     )
     assertEquals("Malicious Zero-Day", sample.detonationStatus)
     assertTrue(sample.sandboxConfidence > 99.0f)
+  }
+
+  @Test
+  fun `ai traffic analysis models toggle and specs test`() {
+    val modelA = com.example.ui.TrafficAnalysisAiModel.ON_DEVICE_NPU
+    val modelB = com.example.ui.TrafficAnalysisAiModel.CLOUD_GEMINI_DEEPSHIELD
+    val dualHybrid = com.example.ui.TrafficAnalysisAiModel.DUAL_CONSENSUS
+
+    assertEquals("Model A", modelA.modelNumber)
+    assertEquals("EdgeShield NPU", modelA.displayName)
+    assertEquals("ON-DEVICE", modelA.tag)
+    assertTrue(modelA.latencyMs < 10)
+
+    assertEquals("Model B", modelB.modelNumber)
+    assertEquals("DeepShield Cloud", modelB.displayName)
+    assertEquals("CLOUD AI", modelB.tag)
+    assertTrue(modelB.accuracyPct > 99.0f)
+
+    assertEquals("Hybrid", dualHybrid.modelNumber)
+    assertEquals(99.9f, dualHybrid.accuracyPct)
+  }
+
+  @Test
+  fun `local heuristic engine offline analysis and entropy calculation test`() {
+    val engine = com.example.network.LocalHeuristicEngine.getInstance()
+    
+    // Test Shannon Entropy
+    val benignData = "AAAAAA"
+    val highEntropyData = "q8!z#9xL@2mP\$7kQ"
+    val benignEntropy = engine.calculateShannonEntropy(benignData)
+    val highEntropy = engine.calculateShannonEntropy(highEntropyData)
+    assertTrue(highEntropy > benignEntropy)
+
+    // Test Benign LAN
+    val benignVerdict = engine.inspectTrafficLocally("192.168.1.50")
+    assertFalse(benignVerdict.isThreat)
+    assertEquals("RULE_LOCAL_RFC1918_PASSTHROUGH", benignVerdict.heuristicRuleMatched)
+
+    // Test Threat Detection (SYN Flood)
+    val threatVerdict = engine.inspectTrafficLocally("185.220.101.5")
+    assertTrue(threatVerdict.isThreat)
+    assertTrue(threatVerdict.eBpfRule.startsWith("eBPF_LOCAL_DROP_SRC"))
+
+    // Test Health Query
+    val health = engine.getEngineHealth()
+    assertEquals(1248, health["ruleCount"])
+    assertEquals(true, health["entropyReady"])
+  }
+
+  @Test
+  fun `engine operational health state model test`() {
+    val healthState = com.example.ui.EngineOperationalHealthState(
+      primaryCloudLlmStatus = com.example.ui.EngineStatus.OPTIMAL,
+      edgeNpuStatus = com.example.ui.EngineStatus.OPTIMAL,
+      dualConsensusStatus = com.example.ui.EngineStatus.OPTIMAL,
+      localHeuristicStatus = com.example.ui.EngineStatus.ARMED_STANDBY,
+      overallHealthScore = 98
+    )
+
+    assertEquals(98, healthState.overallHealthScore)
+    assertEquals(com.example.ui.EngineStatus.OPTIMAL, healthState.primaryCloudLlmStatus)
+    assertEquals(com.example.ui.EngineStatus.ARMED_STANDBY, healthState.localHeuristicStatus)
+    assertEquals("Optimal", com.example.ui.EngineStatus.OPTIMAL.displayName)
+    assertEquals("Active Fallback", com.example.ui.EngineStatus.ACTIVE_FALLBACK.displayName)
   }
 }
 

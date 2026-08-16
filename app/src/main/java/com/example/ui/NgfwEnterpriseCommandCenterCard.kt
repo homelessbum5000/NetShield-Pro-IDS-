@@ -5,14 +5,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,7 +18,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,50 +30,31 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Autorenew
-import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudQueue
-import androidx.compose.material.icons.filled.Computer
-import androidx.compose.material.icons.filled.DataUsage
-import androidx.compose.material.icons.filled.DeviceHub
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Http
 import androidx.compose.material.icons.filled.Hub
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lan
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Psychology
-import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VerifiedUser
-import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.VpnLock
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -104,12 +82,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -118,9 +92,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 enum class NgfwTab(val title: String, val icon: ImageVector) {
     CORE_ID("Core ID™", Icons.Default.Fingerprint),
@@ -130,7 +101,7 @@ enum class NgfwTab(val title: String, val icon: ImageVector) {
     EMERGING_TECH("PQC, ZeroTrust & 5G", Icons.Default.Psychology)
 }
 
-// Data models for interactive NGFW telemetry
+// Data models for NGFW framework
 data class AppIdSignature(
     val name: String,
     val category: String,
@@ -180,7 +151,7 @@ fun NgfwEnterpriseCommandCenterCard(
     var isCardExpanded by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableStateOf(NgfwTab.CORE_ID) }
 
-    // Global NGFW Simulation State
+    // Global NGFW State
     var isSinglePassEngineActive by remember { mutableStateOf(true) }
     var isWildFireCloudSyncActive by remember { mutableStateOf(true) }
     var isDnsSecurityActive by remember { mutableStateOf(true) }
@@ -189,18 +160,17 @@ fun NgfwEnterpriseCommandCenterCard(
     var isPqcVpnActive by remember { mutableStateOf(true) }
     var is5gSliceProtected by remember { mutableStateOf(true) }
 
-    // Live Metrics State
+    // Telemetry
     var totalPacketsInspected by remember { mutableLongStateOf(8492040L) }
     var zeroDayThreatsNeutralized by remember { mutableIntStateOf(142) }
     var activeGlobalProtectUsers by remember { mutableIntStateOf(328) }
-    var singlePassLatencyUs by remember { mutableFloatStateOf(4.2f) } // Microseconds!
+    var singlePassLatencyUs by remember { mutableFloatStateOf(4.2f) }
     var aiPostureHealthScore by remember { mutableFloatStateOf(98.6f) }
     var highAvailabilityState by remember { mutableStateOf("ACTIVE-PRIMARY (HA1/HA2 Synced - 0.4ms)") }
 
-    // Selected Deployment Profile
     var deploymentOption by remember { mutableStateOf("Hardware Appliance (PA-5450 DPU)") }
 
-    // Dynamic lists for simulation
+    // App-ID™ Datastore
     val appSignatures = remember {
         mutableStateListOf(
             AppIdSignature("BitTorrent-P2P", "File-Sharing / High Risk", 5, "TCP/UDP Dynamic", "BitTorrent DHT / uTP Protocol Signature", true, 412.5f, 84),
@@ -212,6 +182,7 @@ fun NgfwEnterpriseCommandCenterCard(
         )
     }
 
+    // User-ID™ & Device-ID Datastore
     val userMappings = remember {
         mutableStateListOf(
             UserIdMapping("alex.miller@corp.local", "DevOps-Admins", "10.240.12.84", "Corporate MacBook Pro", "Trust-Internal", "Compliant", 12),
@@ -221,6 +192,7 @@ fun NgfwEnterpriseCommandCenterCard(
         )
     }
 
+    // Advanced WildFire® Detonation Log
     val wildFireSamples = remember {
         mutableStateListOf(
             WildFireSample("7e29a...f881", "invoice_oct2026.pdf.exe", "PE32 Executable", "Malicious Zero-Day", "CVE-2026-9921", "2 min ago", 99.8f),
@@ -230,6 +202,7 @@ fun NgfwEnterpriseCommandCenterCard(
         )
     }
 
+    // Application Command Center (ACC) Data
     val accTopApps = remember {
         listOf(
             AccAppMetric("Zoom Meetings", "VoIP/Video", 42.8f, 0, 0.1f, Color(0xFF38BDF8)),
@@ -240,7 +213,7 @@ fun NgfwEnterpriseCommandCenterCard(
         )
     }
 
-    // Background live ticker to simulate high-throughput traffic
+    // Live packet engine ticker
     LaunchedEffect(isSinglePassEngineActive) {
         while (true) {
             delay(3000)
@@ -251,19 +224,7 @@ fun NgfwEnterpriseCommandCenterCard(
         }
     }
 
-    val pulseTransition = rememberInfiniteTransition(label = "ngfw_pulse")
-    val pulseAlpha by pulseTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_alpha"
-    )
-
     val primaryColor = Color(0xFF0284C7)
-    val accentGreen = Color(0xFF10B981)
     val cardBackground = Color(0xFF0B132B)
 
     Card(
@@ -395,7 +356,7 @@ fun NgfwEnterpriseCommandCenterCard(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Category Navigation Tabs
+                // Navigation Tabs
                 ScrollableTabRow(
                     selectedTabIndex = selectedTab.ordinal,
                     containerColor = Color(0xFF0F172A),
@@ -437,7 +398,6 @@ fun NgfwEnterpriseCommandCenterCard(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Tab Content Rendering
                 when (selectedTab) {
                     NgfwTab.CORE_ID -> {
                         CoreIdentificationView(
@@ -535,7 +495,7 @@ fun NgfwEnterpriseCommandCenterCard(
 }
 
 // -------------------------------------------------------------
-// Sub-View 1: Core Identification Technologies (App-ID, User-ID, Content-ID, Device-ID)
+// Sub-View 1: Core Identification Technologies
 // -------------------------------------------------------------
 @Composable
 fun CoreIdentificationView(
@@ -544,7 +504,6 @@ fun CoreIdentificationView(
     onToggleAppBlock: (Int) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        // App-ID Technology Section
         SectionHeaderWithBadge(
             title = "App-ID™ Signature Engine",
             badge = "PATENTED BEHAVIORAL CLASSIFIER",
@@ -720,7 +679,6 @@ fun ThreatPreventionServicesView(
     onTriggerDetonation: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Toggle Controls for Cloud & Inspection Services
         SectionHeaderWithBadge(
             title = "Security Subscriptions & Engines",
             badge = "INLINE ML ACTIVE",
@@ -756,7 +714,6 @@ fun ThreatPreventionServicesView(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // WildFire Live Detonation Sandbox Log
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -861,7 +818,7 @@ fun ThreatPreventionServicesView(
 }
 
 // -------------------------------------------------------------
-// Sub-View 3: Single-Pass Parallel Processing (SP3) & HA Clustering
+// Sub-View 3: Single-Pass Parallel Processing (SP3) & HA
 // -------------------------------------------------------------
 @Composable
 fun SinglePassArchitectureView(
@@ -887,7 +844,6 @@ fun SinglePassArchitectureView(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Visual Flow Canvas Diagram
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -937,7 +893,7 @@ fun SinglePassArchitectureView(
         HorizontalDivider(color = Color(0xFF1E293B))
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Deployment Options Selector
+        // Deployment Options
         SectionHeaderWithBadge(
             title = "Deployment Form Factors",
             badge = "FLEXIBLE ARCHITECTURE",
@@ -987,7 +943,7 @@ fun SinglePassArchitectureView(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // High Availability & Clustering
+        // High Availability (HA)
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
@@ -1041,49 +997,51 @@ fun AccAndAiOpsView(
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionHeaderWithBadge(
             title = "Application Command Center (ACC)",
-            badge = "REAL-TIME TELEMETRY",
-            badgeColor = Color(0xFF10B981)
+            badge = "VISUAL RISK DASHBOARD",
+            badgeColor = Color(0xFF38BDF8)
         )
         Text(
-            text = "Visual dashboard delivering interactive visibility into top network applications, threat risk vectors, and bandwidth consumption.",
+            text = "Real-time visibility into application traffic volume, risk profiles, and active threats across the network.",
             style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // ACC Bandwidth Breakdown Bars
-        topApps.forEach { app ->
-            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        topApps.forEach { metric ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(app.color)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "${app.appName} (${app.category})",
-                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFF1F5F9), fontWeight = FontWeight.Medium)
-                        )
-                    }
                     Text(
-                        text = "${app.bandwidthGb} GB • ${app.threatCount} Threats",
-                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
+                        text = "${metric.appName} (${metric.category})",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF1F5F9)
+                        )
+                    )
+                    Text(
+                        text = "${metric.bandwidthGb} GB • ${metric.threatCount} Threats",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = metric.color,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 LinearProgressIndicator(
-                    progress = { (app.bandwidthGb / 50.0f).coerceIn(0.05f, 1.0f) },
+                    progress = { (metric.bandwidthGb / 50f).coerceIn(0.05f, 1f) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp)),
-                    color = app.color,
+                    color = metric.color,
                     trackColor = Color(0xFF1E293B)
                 )
             }
@@ -1093,16 +1051,16 @@ fun AccAndAiOpsView(
         HorizontalDivider(color = Color(0xFF1E293B))
         Spacer(modifier = Modifier.height(16.dp))
 
-        // AIOps & GlobalProtect ZTNA Remote Access
+        // AIOps for NGFW & GlobalProtect
         SectionHeaderWithBadge(
-            title = "AIOps for NGFW & GlobalProtect",
-            badge = "PANORAMA / STRATA CLOUD",
-            badgeColor = Color(0xFF8B5CF6)
+            title = "AIOps for NGFW & Strata Cloud Manager",
+            badge = "MACHINE LEARNING OPS",
+            badgeColor = Color(0xFF10B981)
         )
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(10.dp),
             color = Color(0xFF0F172A),
             border = BorderStroke(1.dp, Color(0xFF1E293B))
         ) {
@@ -1112,68 +1070,27 @@ fun AccAndAiOpsView(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "AIOps Proactive Posture Check",
+                            text = "AIOps Health Posture Score: ${"%.1f".format(aiHealthScore)}%",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFF1F5F9)
+                                color = Color(0xFF10B981)
                             )
                         )
                         Text(
-                            text = "Posture Score: ${"%.1f".format(aiHealthScore)}/100 • Zero Critical Misconfigurations",
-                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF38BDF8), fontSize = 11.sp)
+                            text = "Active GlobalProtect ZTNA VPN Users: $activeVpnUsers",
+                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
                         )
                     }
 
                     Button(
                         onClick = onOptimizePosture,
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.testTag("aiops_auto_optimize_button")
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.testTag("optimize_aiops_posture_button")
                     ) {
-                        Text("Auto-Tune", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = Color(0xFF1E293B))
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.VpnLock,
-                            contentDescription = null,
-                            tint = Color(0xFF38BDF8),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "GlobalProtect Secure Remote Access (ZTNA)",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color(0xFFF1F5F9),
-                                fontWeight = FontWeight.Medium
-                            )
-                        )
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = Color(0xFF064E3B)
-                    ) {
-                        Text(
-                            text = "$activeVpnUsers USERS CONNECTED",
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFF6EE7B7),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp
-                            )
-                        )
+                        Text("Auto-Remediate", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1182,7 +1099,7 @@ fun AccAndAiOpsView(
 }
 
 // -------------------------------------------------------------
-// Sub-View 5: Advanced & Emerging Capabilities (PQC, Zero Trust, 5G, IoT)
+// Sub-View 5: Advanced & Emerging Capabilities
 // -------------------------------------------------------------
 @Composable
 fun EmergingCapabilitiesView(
@@ -1196,45 +1113,44 @@ fun EmergingCapabilitiesView(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionHeaderWithBadge(
-            title = "Zero Trust & IoT Segmentation",
-            badge = "NIST SP 800-207",
-            badgeColor = Color(0xFF0284C7)
+            title = "Zero Trust, PQC & 5G Security",
+            badge = "POST-QUANTUM READY",
+            badgeColor = Color(0xFF8B5CF6)
         )
 
         SecurityServiceToggleRow(
-            title = "Zero Trust Micro-Segmentation Matrix",
-            subtitle = "Strict default-deny across Trust, Untrust, DMZ, and IoT VLANs",
+            title = "Zero Trust Policy Enforcement (ZTNA)",
+            subtitle = "Strict default-deny micro-segmentation across internal VLANs and hybrid clouds",
             isChecked = isZeroTrustEnforced,
             onCheckedChange = onToggleZeroTrust,
-            icon = Icons.Default.Hub,
-            testTag = "toggle_zero_trust_matrix"
-        )
-
-        SecurityServiceToggleRow(
-            title = "5G & Cellular Infrastructure Security",
-            subtitle = "GTP-U/S1-U tunnel inspection, IMSI fraud defense & network slice isolation",
-            isChecked = is5gSliceProtected,
-            onCheckedChange = onToggle5gSlice,
-            icon = Icons.Default.Sensors,
-            testTag = "toggle_5g_slice_security"
+            icon = Icons.Default.VerifiedUser,
+            testTag = "toggle_zero_trust_service"
         )
 
         SecurityServiceToggleRow(
             title = "Post-Quantum Cryptography (PQC) VPN",
-            subtitle = "FIPS-203 ML-KEM-1024 + ML-DSA lattice tunnel immune to Shor's algorithm",
+            subtitle = "Hybrid ML-KEM-1024 + ML-DSA lattice encryption protecting against quantum decryption",
             isChecked = isPqcVpnActive,
             onCheckedChange = onTogglePqcVpn,
-            icon = Icons.Default.VpnKey,
-            testTag = "toggle_pqc_vpn_tunnel"
+            icon = Icons.Default.VpnLock,
+            testTag = "toggle_pqc_vpn_service"
+        )
+
+        SecurityServiceToggleRow(
+            title = "5G & 4G/LTE Infrastructure Security",
+            subtitle = "Dedicated GTP-U tunnel inspection, subscriber IMSI protection, and slice isolation",
+            isChecked = is5gSliceProtected,
+            onCheckedChange = onToggle5gSlice,
+            icon = Icons.Default.Devices,
+            testTag = "toggle_5g_slice_service"
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // PQC Key Rotation Action Box
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
-            color = Color(0xFF030712),
+            color = Color(0xFF0F172A),
             border = BorderStroke(1.dp, Color(0xFF1E293B))
         ) {
             Row(
@@ -1244,39 +1160,29 @@ fun EmergingCapabilitiesView(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.VerifiedUser,
-                        contentDescription = null,
-                        tint = Color(0xFF10B981),
-                        modifier = Modifier.size(20.dp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "GlobalProtect PQC Key Exchange",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF1F5F9)
+                        )
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "Quantum Resistance: OPTIMAL",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFF1F5F9)
-                            )
-                        )
-                        Text(
-                            text = "Active Lattice Hybrid: ML-KEM-1024 + X25519",
-                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 10.sp)
-                        )
-                    }
+                    Text(
+                        text = "Standard: NIST FIPS-203 Kyber-1024 / ML-KEM",
+                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF38BDF8), fontSize = 10.sp)
+                    )
                 }
 
-                Button(
+                OutlinedButton(
                     onClick = onTriggerQuantumRekey,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.testTag("pqc_rekey_action_button")
+                    border = BorderStroke(1.dp, Color(0xFF8B5CF6)),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.testTag("trigger_pqc_rekey_button")
                 ) {
-                    Text("Rotate Keys", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color(0xFFC084FC))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Quantum Re-Key", color = Color(0xFFC084FC), fontSize = 10.sp)
                 }
             }
         }
@@ -1286,56 +1192,6 @@ fun EmergingCapabilitiesView(
 // -------------------------------------------------------------
 // Helper UI Components
 // -------------------------------------------------------------
-@Composable
-fun NgfwMetricTile(
-    label: String,
-    value: String,
-    subtext: String,
-    color: Color,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(10.dp),
-        color = Color(0xFF0F172A),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.3f))
-    ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = Color(0xFF94A3B8),
-                        fontSize = 10.sp
-                    )
-                )
-                Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = color,
-                    fontSize = 15.sp
-                )
-            )
-            Text(
-                text = subtext,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    color = Color(0xFF64748B),
-                    fontSize = 9.sp
-                )
-            )
-        }
-    }
-}
-
 @Composable
 fun SectionHeaderWithBadge(
     title: String,
@@ -1351,13 +1207,13 @@ fun SectionHeaderWithBadge(
             text = title,
             style = MaterialTheme.typography.titleSmall.copy(
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFF1F5F9)
+                color = Color(0xFFF8FAFC)
             )
         )
         Surface(
             shape = RoundedCornerShape(4.dp),
             color = badgeColor.copy(alpha = 0.2f),
-            border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.5f))
+            border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.6f))
         ) {
             Text(
                 text = badge,
@@ -1374,27 +1230,82 @@ fun SectionHeaderWithBadge(
 
 @Composable
 fun RiskBadge(risk: Int) {
-    val (bgColor, textColor, label) = when (risk) {
-        5 -> Triple(Color(0xFF450A0A), Color(0xFFFCA5A5), "RISK 5: CRITICAL")
-        4 -> Triple(Color(0xFF78350F), Color(0xFFFDE68A), "RISK 4: HIGH")
-        3 -> Triple(Color(0xFF713F12), Color(0xFFFEF08A), "RISK 3: MEDIUM")
-        2 -> Triple(Color(0xFF064E3B), Color(0xFF6EE7B7), "RISK 2: LOW")
-        else -> Triple(Color(0xFF0F2942), Color(0xFF38BDF8), "RISK 1: SAFE")
+    val (label, bg, fg) = when (risk) {
+        5 -> Triple("CRITICAL", Color(0xFF450A0A), Color(0xFFFCA5A5))
+        4 -> Triple("HIGH", Color(0xFF78350F), Color(0xFFFDE68A))
+        3 -> Triple("MEDIUM", Color(0xFF422006), Color(0xFFFED7AA))
+        2 -> Triple("LOW", Color(0xFF064E3B), Color(0xFF6EE7B7))
+        else -> Triple("SAFE", Color(0xFF0F172A), Color(0xFF38BDF8))
     }
 
     Surface(
         shape = RoundedCornerShape(4.dp),
-        color = bgColor
+        color = bg
     ) {
         Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+            text = "RISK $risk: $label",
+            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
             style = MaterialTheme.typography.labelSmall.copy(
-                color = textColor,
-                fontWeight = FontWeight.Bold,
-                fontSize = 8.sp
+                color = fg,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold
             )
         )
+    }
+}
+
+@Composable
+fun NgfwMetricTile(
+    label: String,
+    value: String,
+    subtext: String,
+    color: Color,
+    icon: ImageVector,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF0F172A),
+        border = BorderStroke(1.dp, Color(0xFF1E293B))
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = Color(0xFF94A3B8),
+                        fontSize = 10.sp
+                    )
+                )
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = color,
+                    fontSize = 15.sp
+                )
+            )
+            Text(
+                text = subtext,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = Color(0xFF64748B),
+                    fontSize = 9.sp
+                )
+            )
+        }
     }
 }
 
@@ -1423,37 +1334,36 @@ fun SecurityServiceToggleRow(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
-                        .background(if (isChecked) Color(0xFF0284C7).copy(alpha = 0.2f) else Color(0xFF334155)),
+                        .background(Color(0xFF1E293B)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = if (isChecked) Color(0xFF38BDF8) else Color(0xFF94A3B8),
-                        modifier = Modifier.size(16.dp)
+                        tint = if (isChecked) Color(0xFF38BDF8) else Color(0xFF64748B),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.bodyMedium.copy(
+                        style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF1F5F9),
-                            fontSize = 12.sp
+                            color = Color(0xFFF1F5F9)
                         )
                     )
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF94A3B8),
+                            color = Color(0xFF64748B),
                             fontSize = 10.sp
                         )
                     )
@@ -1463,13 +1373,13 @@ fun SecurityServiceToggleRow(
             Switch(
                 checked = isChecked,
                 onCheckedChange = onCheckedChange,
+                modifier = Modifier.testTag(testTag),
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
+                    checkedThumbColor = Color(0xFFF8FAFC),
                     checkedTrackColor = Color(0xFF0284C7),
-                    uncheckedThumbColor = Color(0xFF94A3B8),
-                    uncheckedTrackColor = Color(0xFF334155)
-                ),
-                modifier = Modifier.testTag(testTag)
+                    uncheckedThumbColor = Color(0xFF64748B),
+                    uncheckedTrackColor = Color(0xFF1E293B)
+                )
             )
         }
     }
@@ -1484,8 +1394,8 @@ fun SinglePassStageCard(
 ) {
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = if (isHighlighted) Color(0xFF0C2444) else Color(0xFF0F172A),
-        border = BorderStroke(1.dp, color.copy(alpha = if (isHighlighted) 0.8f else 0.4f))
+        color = if (isHighlighted) Color(0xFF0369A1).copy(alpha = 0.3f) else Color(0xFF0F172A),
+        border = BorderStroke(1.dp, if (isHighlighted) Color(0xFF38BDF8) else Color(0xFF1E293B))
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
@@ -1493,15 +1403,15 @@ fun SinglePassStageCard(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelSmall.copy(
+                style = MaterialTheme.typography.bodySmall.copy(
                     fontWeight = FontWeight.Bold,
-                    color = color,
+                    color = if (isHighlighted) Color(0xFF38BDF8) else Color(0xFFF1F5F9),
                     fontSize = 10.sp
                 )
             )
             Text(
                 text = desc,
-                style = MaterialTheme.typography.labelSmall.copy(
+                style = MaterialTheme.typography.bodySmall.copy(
                     color = Color(0xFF94A3B8),
                     fontSize = 9.sp
                 )

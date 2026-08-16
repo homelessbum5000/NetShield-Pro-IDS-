@@ -525,7 +525,7 @@ fun HardwareAcceleratorCard(
 
                             Column {
                                 Text(
-                                    text = "NPU Neural Offload (Hexagon / TPU)",
+                                    text = "Dedicated NPU Neural Offload",
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = Color.White, fontSize = 13.sp)
                                 )
                                 Text(

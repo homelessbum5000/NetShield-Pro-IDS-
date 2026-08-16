@@ -245,7 +245,7 @@ fun CustomEncryptedDnsCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 2. DNS Server Presets (Cloudflare, Quad9, AdGuard, NextDNS, Local Pi-hole, Custom)
+            // 2. DNS Server Presets (Cloudflare, Quad9, AdGuard, NextDNS, Local DNS Sinkhole, Custom)
             Text("DNS Server Presets:", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFFCBD5E1), fontWeight = FontWeight.Bold))
             Spacer(modifier = Modifier.height(6.dp))
 
@@ -259,7 +259,7 @@ fun CustomEncryptedDnsCard(
                     Triple("Quad9 (Malware Block)", Pair("9.9.9.9", "149.112.112.112"), Pair("https://dns.quad9.net/dns-query", "dns.quad9.net")),
                     Triple("AdGuard DNS", Pair("94.140.14.14", "94.140.15.15"), Pair("https://dns.adguard-dns.com/dns-query", "dns.adguard-dns.com")),
                     Triple("NextDNS", Pair("45.90.28.0", "45.90.30.0"), Pair("https://dns.nextdns.io/custom-id", "dns.nextdns.io")),
-                    Triple("Local Pi-hole / Unbound", Pair("192.168.1.253", "192.168.1.1"), Pair("https://pihole.local/dns-query", "pihole.local"))
+                    Triple("Local DNS Sinkhole / Resolver", Pair("192.168.1.253", "192.168.1.1"), Pair("https://dns-sinkhole.local/dns-query", "dns-sinkhole.local"))
                 )
 
                 presets.forEach { (name, ips, endpoints) ->

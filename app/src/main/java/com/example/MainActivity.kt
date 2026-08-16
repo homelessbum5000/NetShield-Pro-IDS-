@@ -110,7 +110,7 @@ import com.example.ui.LlmAutoDebuggerCard
 import com.example.ui.NetworkTrafficLogViewModel
 import com.example.ui.NetworkTrafficLoggerCard
 import com.example.ui.PerAppFirewallCard
-import com.example.ui.PiHoleIpBlockerCard
+import com.example.ui.DnsSinkholeIpBlockerCard
 import com.example.ui.CustomEncryptedDnsCard
 import com.example.ui.DualLlmPersistentSettingsCard
 import com.example.ui.WifiSecurityInspectorCard
@@ -118,12 +118,14 @@ import com.example.ui.DpiProtocolFilterCard
 import com.example.ui.SecurityAutomationRulesCard
 import com.example.ui.SampleBasedQuantumDiagonalizationCard
 import com.example.ui.ThreatIntensityCanvasCard
-import com.example.ui.CudaQAcademicStudioCard
+import com.example.ui.QuantumAcademicStudioCard
 import com.example.ui.QuantumEncryptionStatusIndicatorCard
 import com.example.ui.QuantumStatusBarNotificationCard
 import com.example.ui.NgfwEnterpriseCommandCenterCard
-import com.example.ui.NvidiaDpuAcceleratedSecurityCard
+import com.example.ui.DpuAcceleratedSecurityCard
 import com.example.ui.QuantumHandshakeSpeedTimelineCard
+import com.example.ui.AiModelToggleDashboardCard
+import com.example.ui.AiEngineOperationalHealthCard
 import com.example.network.QuantumTunnelStatusManager
 import com.example.network.QuantumTunnelNotificationService
 import androidx.compose.material.icons.filled.WbSunny
@@ -197,14 +199,21 @@ fun NetShieldApp(
     val cryptoProfile by viewModel.cryptoProfile.collectAsStateWithLifecycle()
     val cryptoBenchmarkResult by viewModel.cryptoBenchmarkResult.collectAsStateWithLifecycle()
     val appRules by viewModel.appFirewallRules.collectAsStateWithLifecycle()
-    val piHoleRules by viewModel.piHoleRules.collectAsStateWithLifecycle()
-    val piHoleBlocklists by viewModel.piHoleBlocklists.collectAsStateWithLifecycle()
+    val dnsSinkholeRules by viewModel.dnsSinkholeRules.collectAsStateWithLifecycle()
+    val dnsSinkholeBlocklists by viewModel.dnsSinkholeBlocklists.collectAsStateWithLifecycle()
     val encryptedDnsState by viewModel.encryptedDnsState.collectAsStateWithLifecycle()
     val wifiSecurityState by viewModel.wifiSecurityState.collectAsStateWithLifecycle()
     val isWifiScanning by viewModel.isWifiScanning.collectAsStateWithLifecycle()
     val dpiRules by viewModel.dpiRules.collectAsStateWithLifecycle()
     val automationRules by viewModel.automationRules.collectAsStateWithLifecycle()
     val sqdState by viewModel.sqdExecutionState.collectAsStateWithLifecycle()
+    val selectedAiModel by viewModel.selectedAiTrafficModel.collectAsStateWithLifecycle()
+    val aiModelInspectionResult by viewModel.aiModelInspectionResult.collectAsStateWithLifecycle()
+    val isInspectingTraffic by viewModel.isInspectingTraffic.collectAsStateWithLifecycle()
+    val fallbackMode by viewModel.localHeuristicMode.collectAsStateWithLifecycle()
+    val isFallbackEngaged by viewModel.isLocalHeuristicFallbackEngaged.collectAsStateWithLifecycle()
+    val totalFallbackAnalysesCount by viewModel.totalFallbackAnalysesCount.collectAsStateWithLifecycle()
+    val engineHealthState by viewModel.engineOperationalHealth.collectAsStateWithLifecycle()
 
     val trafficLogViewModel: NetworkTrafficLogViewModel = viewModel()
     val trafficLogs by trafficLogViewModel.filteredTrafficLogs.collectAsStateWithLifecycle()
@@ -345,6 +354,33 @@ fun NetShieldApp(
                 NgfwEnterpriseCommandCenterCard()
             }
 
+            // Integrated AI Models for Network Traffic Analysis Toggle Component
+            item {
+                AiModelToggleDashboardCard(
+                    selectedModel = selectedAiModel,
+                    onSelectModel = { viewModel.selectAiTrafficModel(it) },
+                    inspectionResult = aiModelInspectionResult,
+                    isInspecting = isInspectingTraffic,
+                    onRunInspection = { target -> viewModel.runLiveAiTrafficInspection(target) },
+                    onClearInspection = { viewModel.clearAiTrafficInspectionResult() },
+                    fallbackMode = fallbackMode,
+                    onSelectFallbackMode = { viewModel.setFallbackEngineMode(it) },
+                    isFallbackEngaged = isFallbackEngaged
+                )
+            }
+
+            // Summary Dashboard: AI & Threat Detection Operational Health (Cloud Dual-LLM & Local Heuristic Engine)
+            item {
+                AiEngineOperationalHealthCard(
+                    healthState = engineHealthState,
+                    fallbackMode = fallbackMode,
+                    isFallbackEngaged = isFallbackEngaged,
+                    totalFallbackAnalysesCount = totalFallbackAnalysesCount,
+                    onRunDiagnostic = { viewModel.runEngineHealthDiagnostic() },
+                    onSelectFallbackMode = { viewModel.setFallbackEngineMode(it) }
+                )
+            }
+
             // Real-Time Recharts Line Graph: Quantum-Safe Handshake Speed & Latency Fluctuations (Last 1 Hour)
             item {
                 QuantumHandshakeSpeedTimelineCard()
@@ -432,15 +468,15 @@ fun NetShieldApp(
                 )
             }
 
-            // Pi-hole Style IP & Domain Sinkhole Blocker Card
+            // DNS Sinkhole & IP Blocker Card
             item {
-                PiHoleIpBlockerCard(
-                    piHoleRules = piHoleRules,
-                    blocklists = piHoleBlocklists,
-                    onAddRule = { target, action, category -> viewModel.addPiHoleRule(target, action, category) },
-                    onToggleRule = { id, enabled -> viewModel.togglePiHoleRule(id, enabled) },
-                    onDeleteRule = { id -> viewModel.deletePiHoleRule(id) },
-                    onToggleBlocklist = { id, enabled -> viewModel.togglePiHoleBlocklist(id, enabled) }
+                DnsSinkholeIpBlockerCard(
+                    dnsSinkholeRules = dnsSinkholeRules,
+                    blocklists = dnsSinkholeBlocklists,
+                    onAddRule = { target, action, category -> viewModel.addDnsSinkholeRule(target, action, category) },
+                    onToggleRule = { id, enabled -> viewModel.toggleDnsSinkholeRule(id, enabled) },
+                    onDeleteRule = { id -> viewModel.deleteDnsSinkholeRule(id) },
+                    onToggleBlocklist = { id, enabled -> viewModel.toggleDnsSinkholeBlocklist(id, enabled) }
                 )
             }
 
@@ -587,9 +623,9 @@ fun NetShieldApp(
                 )
             }
 
-            // NVIDIA BlueField DPU Accelerated Security Integrations (Check Point, Cisco, Palo Alto)
+            // DPU Hardware Accelerated Security Offload Card
             item {
-                NvidiaDpuAcceleratedSecurityCard()
+                DpuAcceleratedSecurityCard()
             }
 
             // Gemini Weekly Security Digest & Hardening Recommendation Card
@@ -637,9 +673,9 @@ fun NetShieldApp(
                 )
             }
 
-            // NVIDIA CUDA-Q Academic Studio & Self-Paced Jupyter Notebook Modules
+            // Open Quantum Simulation Studio & Self-Paced Modules
             item {
-                CudaQAcademicStudioCard()
+                QuantumAcademicStudioCard()
             }
 
             // Exponential Backoff Configurator

@@ -90,51 +90,47 @@ import kotlinx.coroutines.launch
 enum class InfrastructureEnvironment(val title: String, val badge: String, val desc: String) {
     AI_ML_CLUSTER(
         title = "AI / ML GPU Training & Inference",
-        badge = "H100 / Blackwell Cluster",
+        badge = "High-Throughput Compute Cluster",
         desc = "High-throughput tensor pipelines, preventing model weights theft & training data poisoning."
     ),
     ENTERPRISE_DATACENTER(
-        title = "Standard Enterprise Data Center",
+        title = "Enterprise Cloud & Data Center",
         badge = "Bare-Metal / Hybrid Cloud",
         desc = "Micro-segmented multi-tenant workloads, zero-trust perimeter & regulatory compliance."
     )
 }
 
-enum class NvidiaDpuSolution(
-    val vendorName: String,
-    val solutionTitle: String,
-    val sourceCitation: String,
-    val keyCapability: String,
+enum class OpenDpuSolution(
+    val title: String,
+    val standardLabel: String,
     val architectureRole: String,
+    val keyCapability: String,
     val throughputRating: String,
     val tagColor: Color
 ) {
-    CHECK_POINT(
-        vendorName = "Check Point",
-        solutionTitle = "Check Point AI Factory / AI Cloud Protect",
-        sourceCitation = "Check Point Quantum / NVIDIA Partner",
-        keyCapability = "Offloads Deep Packet Inspection (DPI) & zero-day threat prevention directly onto BlueField DPUs, securing AI pipelines and data centers without stealing host GPU or CPU cycles.",
-        architectureRole = "Zero-Day Threat Defense & AI Pipeline Shield",
+    LINE_RATE_DPI(
+        title = "Line-Rate Deep Packet Inspection",
+        standardLabel = "Open eBPF / XDP Hardware Offload",
+        architectureRole = "Zero-Day Threat Defense & Pipeline Shield",
+        keyCapability = "Offloads Deep Packet Inspection (DPI) & zero-day threat prevention directly onto DPU hardware accelerators, securing high-speed data pipelines without stealing host CPU/GPU cycles.",
         throughputRating = "400 Gbps Line-Rate",
-        tagColor = Color(0xFFEC4899)
+        tagColor = Color(0xFF10B981)
     ),
-    CISCO(
-        vendorName = "Cisco",
-        solutionTitle = "Cisco Hybrid Mesh Firewall with BlueField",
-        sourceCitation = "Cisco Security & NVIDIA BlueField",
-        keyCapability = "Extends stateful workload segmentation and micro-segmentation right inside servers via NVIDIA BlueField DPUs to stop lateral threats early.",
-        architectureRole = "Intra-Server Microsegmentation & Lateral Movement Blocker",
+    HARDWARE_MICROSEGMENTATION(
+        title = "Stateful Hardware Microsegmentation",
+        standardLabel = "Zero-Trust PCIe Isolation",
+        architectureRole = "Intra-Server Workload Isolation & Lateral Blocker",
+        keyCapability = "Extends stateful workload segmentation and micro-segmentation directly inside server PCIe boundaries via DPU coprocessors to isolate untrusted processes.",
         throughputRating = "320 Gbps Sub-microsecond",
         tagColor = Color(0xFF06B6D4)
     ),
-    PALO_ALTO(
-        vendorName = "Palo Alto Networks",
-        solutionTitle = "Palo Alto Networks VM-Series NGFW",
-        sourceCitation = "NVIDIA Developer & PAN-OS DPU Offload",
-        keyCapability = "Integrates with BlueField DPUs to intelligently optimize traffic inspection, accelerating threat detection while scaling high-throughput enterprise data.",
-        architectureRole = "Intelligent Intelligent Hardware Offload & App-ID Acceleration",
+    INTELLIGENT_FLOW_OFFLOAD(
+        title = "Intelligent Flow Table Offload",
+        standardLabel = "OpenFlow / DPDK Accelerated",
+        architectureRole = "Hardware App-ID & Flow Anomaly Acceleration",
+        keyCapability = "Integrates with open DPDK flow engines to intelligently inspect connection tables, accelerating threat detection while scaling enterprise throughput.",
         throughputRating = "400 Gbps Hardware-Accelerated",
-        tagColor = Color(0xFFF97316)
+        tagColor = Color(0xFFF59E0B)
     )
 }
 
@@ -147,12 +143,12 @@ data class DpuOffloadBenefit(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun NvidiaDpuAcceleratedSecurityCard(
+fun DpuAcceleratedSecurityCard(
     modifier: Modifier = Modifier
 ) {
     var isDpuOffloadActive by remember { mutableStateOf(true) }
     var selectedEnv by remember { mutableStateOf(InfrastructureEnvironment.AI_ML_CLUSTER) }
-    var selectedSolution by remember { mutableStateOf(NvidiaDpuSolution.CHECK_POINT) }
+    var selectedSolution by remember { mutableStateOf(OpenDpuSolution.LINE_RATE_DPI) }
     var isRunningDpuInspection by remember { mutableStateOf(false) }
     var inspectionProgress by remember { mutableFloatStateOf(0f) }
     var inspectionResultLogs by remember { mutableStateOf<List<String>?>(null) }
@@ -161,29 +157,17 @@ fun NvidiaDpuAcceleratedSecurityCard(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Infinite breathing glow for active DPU hardware offload
-    val infiniteTransition = rememberInfiniteTransition(label = "dpu_pulse")
-    val pulseGlow by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_glow"
-    )
-
     val dpuBenefits = listOf(
         DpuOffloadBenefit(
-            title = "Zero Performance Loss",
-            subtitle = "Security processing happens on the DPU instead of the host CPU/GPU, keeping AI training and high-frequency workloads at maximum speed.",
-            highlight = "100% Host GPU Cycles Preserved",
+            title = "Zero Host Overhead",
+            subtitle = "Security processing executes on dedicated DPU SmartNIC cores instead of host CPU/GPU, keeping core compute pipelines at 100% capacity.",
+            highlight = "100% Host Cycles Preserved",
             iconColor = Color(0xFF10B981)
         ),
         DpuOffloadBenefit(
-            title = "Isolates Workloads at Hardware Level",
-            subtitle = "Hardware-level physical isolation prevents model theft, training data poisoning, and prompt injection attacks at the infrastructure layer.",
-            highlight = "Hardware Ring-0 Protection",
+            title = "Hardware Ring-0 Workload Isolation",
+            subtitle = "Physical PCIe separation isolates security telemetry from host memory, mitigating unauthorized introspection and root compromise.",
+            highlight = "Physical Bus Isolation",
             iconColor = Color(0xFF38BDF8)
         )
     )
@@ -191,13 +175,13 @@ fun NvidiaDpuAcceleratedSecurityCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .testTag("nvidia_dpu_accelerated_security_card"),
+            .testTag("dpu_accelerated_security_card"),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF081220)),
         shape = RoundedCornerShape(18.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF76B900).copy(alpha = 0.7f)) // NVIDIA Green accent
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.7f))
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
-            // Header with NVIDIA BlueField DPU Brand
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -208,13 +192,13 @@ fun NvidiaDpuAcceleratedSecurityCard(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF76B900).copy(alpha = 0.15f)),
+                            .background(Color(0xFF10B981).copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.DeveloperBoard,
-                            contentDescription = "NVIDIA DPU Security",
-                            tint = Color(0xFF76B900),
+                            contentDescription = "DPU Hardware Security",
+                            tint = Color(0xFF34D399),
                             modifier = Modifier.size(26.dp)
                         )
                     }
@@ -222,7 +206,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "NVIDIA BlueField DPU Security",
+                                text = "DPU Hardware Security Offload",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
@@ -231,7 +215,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                             )
                         }
                         Text(
-                            text = "Hardware-accelerated zero-trust & AI pipeline threat offloading",
+                            text = "Data Processing Unit line-rate zero-trust security architecture",
                             style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
                         )
                     }
@@ -244,13 +228,13 @@ fun NvidiaDpuAcceleratedSecurityCard(
                         isDpuOffloadActive = newVal
                         Toast.makeText(
                             context,
-                            if (newVal) "NVIDIA BlueField DPU Hardware Offload: ACTIVE" else "DPU Offload Disabled: Security running on host CPU/GPU",
+                            if (newVal) "DPU Hardware Offload: ACTIVE" else "DPU Offload Disabled: Security running on host CPU",
                             Toast.LENGTH_SHORT
                         ).show()
                     },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF76B900),
+                        checkedTrackColor = Color(0xFF10B981),
                         uncheckedThumbColor = Color(0xFF94A3B8),
                         uncheckedTrackColor = Color(0xFF334155)
                     ),
@@ -260,7 +244,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFF1E293B))
 
-            // Infrastructure Target Selector (AI/ML vs Enterprise)
+            // Infrastructure Target Selector
             Text(
                 text = "Target Infrastructure Environment:",
                 style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFFCBD5E1), fontWeight = FontWeight.Bold, fontSize = 10.sp)
@@ -276,7 +260,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                     Surface(
                         color = if (isSelected) Color(0xFF0F2B1D) else Color(0xFF131C31),
                         shape = RoundedCornerShape(10.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) Color(0xFF76B900) else Color(0xFF334155)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) Color(0xFF10B981) else Color(0xFF334155)),
                         modifier = Modifier
                             .weight(1f)
                             .clickable { selectedEnv = env }
@@ -296,7 +280,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                                     )
                                 )
                                 if (isSelected) {
-                                    Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF76B900), modifier = Modifier.size(12.dp))
+                                    Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(12.dp))
                                 }
                             }
                             Spacer(modifier = Modifier.height(4.dp))
@@ -315,9 +299,9 @@ fun NvidiaDpuAcceleratedSecurityCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Top NVIDIA-Accelerated Security Solution Selection
+            // DPU Acceleration Module Selection
             Text(
-                text = "Integrated Enterprise Security Solution:",
+                text = "Hardware Offload Module:",
                 style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFFCBD5E1), fontWeight = FontWeight.Bold, fontSize = 10.sp)
             )
             Spacer(modifier = Modifier.height(6.dp))
@@ -327,7 +311,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                NvidiaDpuSolution.values().forEach { sol ->
+                OpenDpuSolution.values().forEach { sol ->
                     val isSelected = selectedSolution == sol
                     FilterChip(
                         selected = isSelected,
@@ -337,7 +321,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                         },
                         label = {
                             Text(
-                                text = sol.vendorName,
+                                text = sol.title,
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                             )
@@ -373,7 +357,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = selectedSolution.solutionTitle,
+                            text = selectedSolution.title,
                             style = MaterialTheme.typography.titleSmall.copy(
                                 color = selectedSolution.tagColor,
                                 fontWeight = FontWeight.Bold,
@@ -414,7 +398,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                             style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF94A3B8), fontSize = 10.sp)
                         )
                         Text(
-                            text = "Source: ${selectedSolution.sourceCitation}",
+                            text = selectedSolution.standardLabel,
                             style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF64748B), fontSize = 9.sp)
                         )
                     }
@@ -437,7 +421,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Bolt, contentDescription = null, tint = Color(0xFF76B900), modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Default.Bolt, contentDescription = null, tint = Color(0xFF34D399), modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = "Why Hardware Offloading Matters",
@@ -475,9 +459,9 @@ fun NvidiaDpuAcceleratedSecurityCard(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(20.dp)
-                                    .clip(CircleShape)
-                                    .background(benefit.iconColor.copy(alpha = 0.2f)),
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(benefit.iconColor.copy(alpha = 0.2f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -525,7 +509,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Action Buttons: Run BlueField DPU Pipeline Benchmark & Deep Architecture
+            // Action Buttons: Run DPU Pipeline Benchmark & Deep Architecture
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -543,20 +527,20 @@ fun NvidiaDpuAcceleratedSecurityCard(
                             inspectionProgress = 1.0f
                             isRunningDpuInspection = false
                             inspectionResultLogs = listOf(
-                                "✓ BlueField-3 DPU PCIe Gen 5.0 Link: Established (16 lanes @ 32 GT/s)",
-                                "✓ Offloaded Engine: ${selectedSolution.solutionTitle}",
+                                "✓ PCIe Gen 5.0 High-Speed Coprocessor Link: Established (16 lanes @ 32 GT/s)",
+                                "✓ Offloaded Module: ${selectedSolution.title}",
                                 "✓ Target Workload: ${selectedEnv.title} (${selectedEnv.badge})",
-                                "✓ Host CPU Utilization: 0.2% (Offload factor: 99.8% on DPU ARM Cores)",
-                                "✓ Host GPU (H100/Blackwell) VRAM Contention: ZERO (Full 80GB VRAM dedicated to LLM)",
-                                "✓ Zero-Day AI Pipeline Threat Shield: 0 blocked prompt injection vectors",
-                                "✓ Lateral Movement Micro-segmentation: Active across all server PCI boundaries",
+                                "✓ Host CPU Utilization: 0.2% (Offload factor: 99.8% on DPU SmartNIC Cores)",
+                                "✓ Host System Memory Contention: ZERO (100% bandwidth available for main pipeline)",
+                                "✓ Zero-Day Data Flow Filter: Active across all network packet rings",
+                                "✓ Micro-segmentation: Active across internal bus boundaries",
                                 "✓ Line-Rate Packet Processing: 388.4 Gbps sustained with 0 dropped frames"
                             )
                         }
                     },
                     enabled = !isRunningDpuInspection,
                     modifier = Modifier.weight(1.3f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF558B2F)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     if (isRunningDpuInspection) {
@@ -589,7 +573,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                 LinearProgressIndicator(
                     progress = { inspectionProgress },
                     modifier = Modifier.fillMaxWidth().height(4.dp),
-                    color = Color(0xFF76B900),
+                    color = Color(0xFF34D399),
                     trackColor = Color(0xFF1E293B)
                 )
             }
@@ -600,7 +584,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                 Surface(
                     color = Color(0xFF030712),
                     shape = RoundedCornerShape(10.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF76B900).copy(alpha = 0.5f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
@@ -610,12 +594,12 @@ fun NvidiaDpuAcceleratedSecurityCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Terminal, contentDescription = null, tint = Color(0xFF76B900), modifier = Modifier.size(14.dp))
+                                Icon(imageVector = Icons.Default.Terminal, contentDescription = null, tint = Color(0xFF34D399), modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "BlueField DPU Telemetry Logs",
+                                    text = "DPU Telemetry & Kernel Offload Logs",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color(0xFF76B900),
+                                        color = Color(0xFF34D399),
                                         fontFamily = FontFamily.Monospace,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp
@@ -623,7 +607,7 @@ fun NvidiaDpuAcceleratedSecurityCard(
                                 )
                             }
                             Text(
-                                text = "DOCA 2.5 / DPDK Line-Rate",
+                                text = "Open DPDK / eBPF Line-Rate",
                                 style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF94A3B8), fontSize = 9.sp)
                             )
                         }
@@ -656,14 +640,14 @@ fun NvidiaDpuAcceleratedSecurityCard(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "NVIDIA BlueField Data Processing Unit (DPU) Architecture",
+                            text = "Data Processing Unit (DPU) Hardware Offload Architecture",
                             style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "• BlueField DPUs offload, accelerate, and isolate data center infrastructure services including networking, storage, cybersecurity, and management.\n" +
-                                    "• By running deep packet inspection directly on DPU ARM cores and hardware accelerators (DOCA), host CPUs and GPUs remain 100% focused on compute-intensive AI workloads.\n" +
-                                    "• Micro-segmentation on the DPU establishes an isolated trust boundary, ensuring that compromised containers or VMs cannot tamper with underlying server infrastructure.",
+                            text = "• Data Processing Units (DPUs) offload, accelerate, and isolate data center infrastructure services including networking, storage, cybersecurity, and management.\n" +
+                                    "• By running deep packet inspection directly on dedicated SmartNIC cores and hardware accelerators (eBPF/DPDK), host CPUs and GPUs remain 100% dedicated to primary compute tasks.\n" +
+                                    "• Micro-segmentation on the DPU establishes an isolated trust boundary, ensuring that compromised user-space processes or VMs cannot tamper with underlying server infrastructure.",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = Color(0xFFCBD5E1),
                                 fontSize = 9.sp,

@@ -28,6 +28,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name="com.example.network.QuantumTunnelActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.network.ACTION_TOGGLE_PROTECTION" />
+                <action android:name="com.example.network.ACTION_ROTATE_KEYS" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name="com.example.network.QuantumTunnelNotificationService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            tools:ignore="ForegroundServicePermission" />
     </application>
 
 </manifest>

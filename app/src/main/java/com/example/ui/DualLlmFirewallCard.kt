@@ -448,14 +448,35 @@ fun DualLlmFirewallCard(
                                         )
                                     }
 
-                                    Text(
-                                        text = "${(scanState.confidenceScore * 100).roundToInt()}% Consensus Confidence",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Color(0xFFA855F7),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (scanState.isFallbackEngaged) {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color(0xFFF59E0B).copy(alpha = 0.2f),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B))
+                                            ) {
+                                                Text(
+                                                    text = "OFFLINE FALLBACK",
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = Color(0xFFFBBF24),
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 9.sp
+                                                    )
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                        }
+
+                                        Text(
+                                            text = "${(scanState.confidenceScore * 100).roundToInt()}% Consensus Confidence",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = if (scanState.isFallbackEngaged) Color(0xFFFBBF24) else Color(0xFFA855F7),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp
+                                            )
                                         )
-                                    )
+                                    }
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))

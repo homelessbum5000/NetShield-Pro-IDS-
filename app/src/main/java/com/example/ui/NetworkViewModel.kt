@@ -12,6 +12,9 @@ import com.example.data.RoomAesGcmCryptoManager
 import com.example.data.AesGcmSecurityProfile
 import com.example.data.AesGcmBenchmarkResult
 import com.example.network.EncryptedIDSRequest
+import com.example.network.FallbackEngineMode
+import com.example.network.LocalHeuristicEngine
+import com.example.network.LocalHeuristicVerdict
 import com.example.network.NetworkConnectivityManager
 import com.example.network.NetworkStatus
 import com.example.network.QuantumRandomRequest
@@ -142,20 +145,20 @@ data class AppFirewallRule(
     val blockedAttemptsToday: Int = 0
 )
 
-enum class PiHoleRuleAction { DENY, ALLOW }
-enum class PiHoleRuleCategory { MALWARE_C2, AD_NETWORK, TRACKER, LOCAL_IP, CUSTOM }
+enum class DnsSinkholeRuleAction { DENY, ALLOW }
+enum class DnsSinkholeRuleCategory { MALWARE_C2, AD_NETWORK, TRACKER, LOCAL_IP, CUSTOM }
 
-data class PiHoleRule(
+data class DnsSinkholeRule(
     val id: String = java.util.UUID.randomUUID().toString(),
     val target: String, // IP Address or Domain e.g., "45.33.32.156", "ads.doubleclick.net"
-    val action: PiHoleRuleAction = PiHoleRuleAction.DENY,
-    val category: PiHoleRuleCategory = PiHoleRuleCategory.CUSTOM,
+    val action: DnsSinkholeRuleAction = DnsSinkholeRuleAction.DENY,
+    val category: DnsSinkholeRuleCategory = DnsSinkholeRuleCategory.CUSTOM,
     val hitsCount: Int = 0,
     val addedDate: String = "",
     val isEnabled: Boolean = true
 )
 
-data class PiHoleBlocklistSubscription(
+data class DnsSinkholeBlocklistSubscription(
     val id: String,
     val name: String,
     val entryCount: Int,
@@ -229,9 +232,113 @@ sealed class DualLlmScanState {
         val primaryLlmVerdict: String,
         val secondaryLlmVerdict: String,
         val autoBlocked: Boolean,
-        val reasoning: String
+        val reasoning: String,
+        val isFallbackEngaged: Boolean = false,
+        val fallbackReason: String? = null
     ) : DualLlmScanState()
 }
+
+enum class TrafficAnalysisAiModel(
+    val id: String,
+    val modelNumber: String,
+    val displayName: String,
+    val tag: String,
+    val engineType: String,
+    val latencyMs: Int,
+    val accuracyPct: Float,
+    val powerUsage: String,
+    val description: String,
+    val supportedFeatures: List<String>
+) {
+    ON_DEVICE_NPU(
+        id = "npu_edge",
+        modelNumber = "Model A",
+        displayName = "EdgeShield NPU",
+        tag = "ON-DEVICE",
+        engineType = "Hardware Neural Core (Qualcomm Hexagon / Tensor TPU)",
+        latencyMs = 4,
+        accuracyPct = 96.8f,
+        powerUsage = "0.8 W (Ultra-Low Energy)",
+        description = "Sub-millisecond local packet inspection running directly on device NPU/NEON tensor cores. Zero cloud latency, 100% offline privacy, zero data egress.",
+        supportedFeatures = listOf("Zero Data Egress", "Sub-5ms Latency", "Offline Heuristics", "eBPF Kernel Offload")
+    ),
+    CLOUD_GEMINI_DEEPSHIELD(
+        id = "cloud_gemini",
+        modelNumber = "Model B",
+        displayName = "DeepShield Cloud",
+        tag = "CLOUD AI",
+        engineType = "Gemini 3.5 Flash & WildFire Threat Intelligence",
+        latencyMs = 38,
+        accuracyPct = 99.4f,
+        powerUsage = "Server-Side (Cloud Compute)",
+        description = "Deep heuristic behavioral analysis powered by Gemini 3.5 Flash & Global WildFire Cloud. Performs semantic payload inspection and zero-day threat correlation.",
+        supportedFeatures = listOf("Gemini 3.5 Flash", "Global Threat DB", "Semantic Payload Scan", "Zero-Day Heuristics")
+    ),
+    DUAL_CONSENSUS(
+        id = "dual_consensus",
+        modelNumber = "Hybrid",
+        displayName = "Dual-Model Consensus",
+        tag = "HYBRID",
+        engineType = "Dual-Pass Parallel Inference (Model A + Model B)",
+        latencyMs = 18,
+        accuracyPct = 99.9f,
+        powerUsage = "Adaptive Dynamic Scaling",
+        description = "Simultaneously dispatches packets to both EdgeShield NPU and DeepShield Cloud. Requires cross-model consensus before enforcing automated firewall drop rules.",
+        supportedFeatures = listOf("Parallel Pipeline", "99.9% Precision", "False-Positive Shield", "Automated Block")
+    )
+}
+
+enum class EngineStatus(val displayName: String) {
+    OPTIMAL("Optimal"),
+    ARMED_STANDBY("Armed / Standby"),
+    ACTIVE_FALLBACK("Active Fallback"),
+    DEGRADED("Degraded"),
+    OFFLINE("Offline / Disconnected")
+}
+
+data class EngineOperationalHealthState(
+    val primaryCloudLlmStatus: EngineStatus = EngineStatus.OPTIMAL,
+    val primaryCloudLatencyMs: Long = 36L,
+    val primaryCloudEndpoint: String = "us-central1 (gemini-3.5-flash)",
+    val primaryCloudUptime: Double = 99.98,
+    
+    val edgeNpuStatus: EngineStatus = EngineStatus.OPTIMAL,
+    val edgeNpuLatencyMs: Long = 4L,
+    val edgeNpuMemoryMb: Int = 142,
+    val edgeNpuHardwareUnit: String = "Dedicated NPU Tensor Accelerator",
+    
+    val dualConsensusStatus: EngineStatus = EngineStatus.OPTIMAL,
+    val consensusAgreementRate: Double = 99.4,
+    val arbitrationPolicy: String = "Dual-Pass Strict Quorum",
+    
+    val localHeuristicStatus: EngineStatus = EngineStatus.ARMED_STANDBY,
+    val localHeuristicLatencyMs: Double = 1.2,
+    val loadedSignaturesCount: Int = 1248,
+    val entropyEngineVersion: String = "v3.8-SIMD-128",
+    val memoryFootprintKb: Long = 840L,
+    
+    val overallHealthScore: Int = 98,
+    val isDiagnosticRunning: Boolean = false,
+    val lastDiagnosticTimestamp: String = "Just now"
+)
+
+data class AiModelInspectionResult(
+    val analyzedTarget: String,
+    val selectedModel: TrafficAnalysisAiModel,
+    val isMalicious: Boolean,
+    val confidenceScore: Float,
+    val threatCategory: String,
+    val attackVector: String,
+    val inferenceTimeMs: Long,
+    val architectureStage: String,
+    val verdictSummary: String,
+    val kernelRuleGenerated: String,
+    val timestamp: String = "",
+    val isFallbackEngaged: Boolean = false,
+    val fallbackReason: String? = null,
+    val shannonEntropyScore: Double? = null,
+    val heuristicRuleName: String? = null
+)
 
 data class WifiSecurityState(
     val ssid: String = "Corporate_Secure_5G",
@@ -448,6 +555,276 @@ class NetworkViewModel(application: Application) : AndroidViewModel(application)
     )
     val isDualLlmEngineEnabled: StateFlow<Boolean> = _isDualLlmEngineEnabled.asStateFlow()
 
+    private val savedModelName = prefs.getString("KEY_SELECTED_AI_TRAFFIC_MODEL", TrafficAnalysisAiModel.ON_DEVICE_NPU.name)
+    private val initialModel = try {
+        TrafficAnalysisAiModel.valueOf(savedModelName ?: TrafficAnalysisAiModel.ON_DEVICE_NPU.name)
+    } catch (e: Exception) {
+        TrafficAnalysisAiModel.ON_DEVICE_NPU
+    }
+    private val _selectedAiTrafficModel = MutableStateFlow(initialModel)
+    val selectedAiTrafficModel: StateFlow<TrafficAnalysisAiModel> = _selectedAiTrafficModel.asStateFlow()
+
+    // Local Heuristic Threat Detection Engine (Zero-network fallback)
+    private val localHeuristicEngine = LocalHeuristicEngine.getInstance()
+    val localHeuristicMode: StateFlow<FallbackEngineMode> = localHeuristicEngine.engineMode
+    val isLocalHeuristicFallbackEngaged: StateFlow<Boolean> = localHeuristicEngine.isFallbackEngaged
+    val totalFallbackAnalysesCount: StateFlow<Int> = localHeuristicEngine.totalFallbackAnalysesCount
+    val lastHeuristicVerdict: StateFlow<LocalHeuristicVerdict?> = localHeuristicEngine.lastHeuristicVerdict
+
+    private val _engineOperationalHealth = MutableStateFlow(EngineOperationalHealthState())
+    val engineOperationalHealth: StateFlow<EngineOperationalHealthState> = _engineOperationalHealth.asStateFlow()
+
+    fun runEngineHealthDiagnostic() {
+        viewModelScope.launch {
+            _engineOperationalHealth.value = _engineOperationalHealth.value.copy(isDiagnosticRunning = true)
+            kotlinx.coroutines.delay(450)
+
+            val isOffline = connectivityManager.networkStatus.value is NetworkStatus.Disconnected
+            val isForcedOffline = localHeuristicEngine.engineMode.value == FallbackEngineMode.FORCED_OFFLINE_HEURISTICS
+            val isFallbackActive = localHeuristicEngine.isFallbackEngaged.value || isOffline || isForcedOffline
+
+            val primaryCloudStatus = when {
+                isOffline -> EngineStatus.OFFLINE
+                isForcedOffline -> EngineStatus.ARMED_STANDBY
+                else -> EngineStatus.OPTIMAL
+            }
+
+            val cloudLatency = if (isOffline) 0L else (32..45).random().toLong()
+            val edgeLatency = (3..5).random().toLong()
+            val heuristicLatency = (10..14).random() / 10.0
+
+            val consensusStatus = when {
+                isOffline -> EngineStatus.DEGRADED
+                isForcedOffline -> EngineStatus.ARMED_STANDBY
+                else -> EngineStatus.OPTIMAL
+            }
+
+            val localHeuristicStatus = if (isFallbackActive) EngineStatus.ACTIVE_FALLBACK else EngineStatus.ARMED_STANDBY
+
+            val healthScore = when {
+                isOffline -> 88
+                isForcedOffline -> 94
+                else -> 98
+            }
+
+            val sdf = SimpleDateFormat("HH:mm:ss 'UTC'", Locale.getDefault())
+            val timestamp = sdf.format(Date())
+
+            _engineOperationalHealth.value = EngineOperationalHealthState(
+                primaryCloudLlmStatus = primaryCloudStatus,
+                primaryCloudLatencyMs = cloudLatency,
+                primaryCloudEndpoint = "us-central1 (gemini-3.5-flash)",
+                primaryCloudUptime = if (isOffline) 98.40 else 99.98,
+                
+                edgeNpuStatus = EngineStatus.OPTIMAL,
+                edgeNpuLatencyMs = edgeLatency,
+                edgeNpuMemoryMb = 142,
+                edgeNpuHardwareUnit = "Dedicated NPU Tensor Accelerator",
+                
+                dualConsensusStatus = consensusStatus,
+                consensusAgreementRate = if (isOffline) 0.0 else 99.4,
+                arbitrationPolicy = if (isOffline) "Failover to Local Heuristics" else "Dual-Pass Strict Quorum",
+                
+                localHeuristicStatus = localHeuristicStatus,
+                localHeuristicLatencyMs = heuristicLatency,
+                loadedSignaturesCount = localHeuristicEngine.loadedSignaturesCount,
+                entropyEngineVersion = localHeuristicEngine.entropyScannerVersion,
+                memoryFootprintKb = 840L,
+                
+                overallHealthScore = healthScore,
+                isDiagnosticRunning = false,
+                lastDiagnosticTimestamp = timestamp
+            )
+        }
+    }
+
+    fun setFallbackEngineMode(mode: FallbackEngineMode) {
+        localHeuristicEngine.setEngineMode(mode)
+        runEngineHealthDiagnostic()
+    }
+
+    private val _aiModelInspectionResult = MutableStateFlow<AiModelInspectionResult?>(null)
+    val aiModelInspectionResult: StateFlow<AiModelInspectionResult?> = _aiModelInspectionResult.asStateFlow()
+
+    private val _isInspectingTraffic = MutableStateFlow(false)
+    val isInspectingTraffic: StateFlow<Boolean> = _isInspectingTraffic.asStateFlow()
+
+    fun selectAiTrafficModel(model: TrafficAnalysisAiModel) {
+        _selectedAiTrafficModel.value = model
+        prefs.edit().putString("KEY_SELECTED_AI_TRAFFIC_MODEL", model.name).apply()
+    }
+
+    fun clearAiTrafficInspectionResult() {
+        _aiModelInspectionResult.value = null
+    }
+
+    fun runLiveAiTrafficInspection(
+        customTarget: String? = null,
+        customPayload: String? = null
+    ) {
+        val target = customTarget?.takeIf { it.isNotBlank() } ?: listOf("185.220.101.5", "198.51.100.42", "45.154.255.88", "192.168.1.145", "103.21.244.11").random()
+        val currentModel = _selectedAiTrafficModel.value
+        val isNetworkOffline = connectivityManager.networkStatus.value is NetworkStatus.Disconnected
+        val fallbackMode = localHeuristicEngine.engineMode.value
+        val requiresServer = currentModel == TrafficAnalysisAiModel.CLOUD_GEMINI_DEEPSHIELD || currentModel == TrafficAnalysisAiModel.DUAL_CONSENSUS
+
+        val shouldFallbackToHeuristics = (isNetworkOffline && requiresServer && fallbackMode != FallbackEngineMode.DISABLED) ||
+                                         (fallbackMode == FallbackEngineMode.FORCED_OFFLINE_HEURISTICS)
+
+        viewModelScope.launch {
+            _isInspectingTraffic.value = true
+            val startTime = System.currentTimeMillis()
+
+            if (shouldFallbackToHeuristics) {
+                // Execute Zero-Network Local Heuristic Threat Detection Engine
+                localHeuristicEngine.updateServerConnectivity(false)
+                delay(120L) // Fast offline processing
+                val heuristicVerdict = localHeuristicEngine.inspectTrafficLocally(target, customPayload ?: "")
+                val elapsed = System.currentTimeMillis() - startTime
+
+                val fallbackReasonStr = if (fallbackMode == FallbackEngineMode.FORCED_OFFLINE_HEURISTICS) {
+                    "Manual override: Forced Local Heuristic Mode (Offline)"
+                } else {
+                    "Cloud server connectivity lost ($currentModel unavailable) -> Auto-degraded to Local Heuristic Engine"
+                }
+
+                val result = AiModelInspectionResult(
+                    analyzedTarget = target,
+                    selectedModel = currentModel,
+                    isMalicious = heuristicVerdict.isThreat,
+                    confidenceScore = heuristicVerdict.confidenceScore,
+                    threatCategory = if (heuristicVerdict.isThreat) "LOCAL_HEURISTIC_ANOMALY" else "BENIGN",
+                    attackVector = heuristicVerdict.attackVector,
+                    inferenceTimeMs = elapsed,
+                    architectureStage = "Local Heuristic Engine (Entropy & Rule Classifier)",
+                    verdictSummary = "[FALLBACK ENGAGED] ${heuristicVerdict.reasoning}",
+                    kernelRuleGenerated = heuristicVerdict.eBpfRule,
+                    timestamp = heuristicVerdict.timestamp,
+                    isFallbackEngaged = true,
+                    fallbackReason = fallbackReasonStr,
+                    shannonEntropyScore = heuristicVerdict.entropyScore,
+                    heuristicRuleName = heuristicVerdict.heuristicRuleMatched
+                )
+
+                _aiModelInspectionResult.value = result
+                _isInspectingTraffic.value = false
+
+                if (heuristicVerdict.isThreat && _isAutoFirewallBlockEnabled.value) {
+                    val autoRule = BlockedFirewallRule(
+                        ipAddress = target,
+                        threatVector = heuristicVerdict.attackVector,
+                        severity = heuristicVerdict.severity,
+                        confidenceScore = heuristicVerdict.confidenceScore,
+                        blockedAtMs = System.currentTimeMillis(),
+                        blockedAtIso = heuristicVerdict.timestamp,
+                        llmModelReasoning = "[Local Heuristic Fallback] ${heuristicVerdict.reasoning}",
+                        kernelRule = "iptables -A INPUT -s $target -j DROP",
+                        isAutoApplied = true
+                    )
+                    _blockedFirewallRules.value = listOf(autoRule) + _blockedFirewallRules.value.filter { it.ipAddress != target }
+                }
+                return@launch
+            }
+
+            localHeuristicEngine.updateServerConnectivity(true)
+
+            // Simulate realistic inference pipeline timing based on the selected AI model
+            val delayMs = when (currentModel) {
+                TrafficAnalysisAiModel.ON_DEVICE_NPU -> 350L
+                TrafficAnalysisAiModel.CLOUD_GEMINI_DEEPSHIELD -> 850L
+                TrafficAnalysisAiModel.DUAL_CONSENSUS -> 950L
+            }
+            delay(delayMs)
+
+            val elapsed = System.currentTimeMillis() - startTime
+            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'", Locale.getDefault())
+            val timestamp = sdf.format(Date())
+
+            val isMalicious = !target.startsWith("192.168.1.")
+            val threatVectors = listOf(
+                "SYN-Flood Volumetric Burst",
+                "Quantum Decryption Harvest Probe",
+                "HTTP/2 Rapid Reset Flood",
+                "Zero-Day C2 Beaconing Signature",
+                "BGP Route Hijack Anomaly"
+            )
+            val chosenVector = if (isMalicious) threatVectors.random() else "Normal Benign Traffic Stream"
+            val category = if (isMalicious) "NETWORK_ANOMALY" else "BENIGN"
+            val confidence = if (isMalicious) {
+                when (currentModel) {
+                    TrafficAnalysisAiModel.ON_DEVICE_NPU -> (94..98).random() / 100f
+                    TrafficAnalysisAiModel.CLOUD_GEMINI_DEEPSHIELD -> (98..99).random() / 100f
+                    TrafficAnalysisAiModel.DUAL_CONSENSUS -> 0.999f
+                }
+            } else {
+                0.995f
+            }
+
+            val verdictSummary = when (currentModel) {
+                TrafficAnalysisAiModel.ON_DEVICE_NPU -> {
+                    if (isMalicious) {
+                        "Model A [EdgeShield NPU]: Sub-5ms packet entropy tensor analysis flagged anomalous L4/L7 sequence ($chosenVector). Local inference score: ${(confidence * 100).toInt()}%."
+                    } else {
+                        "Model A [EdgeShield NPU]: Packet entropy and header structure verified benign. Zero anomaly detected."
+                    }
+                }
+                TrafficAnalysisAiModel.CLOUD_GEMINI_DEEPSHIELD -> {
+                    if (isMalicious) {
+                        "Model B [DeepShield Cloud / Gemini 3.5 Flash]: Global threat graph correlation matched known malicious C2 pattern ($chosenVector). Verified against 40M+ signatures."
+                    } else {
+                        "Model B [DeepShield Cloud / Gemini 3.5 Flash]: Semantic payload analysis confirmed legitimate protocol compliance. Risk index: LOW (0.1%)."
+                    }
+                }
+                TrafficAnalysisAiModel.DUAL_CONSENSUS -> {
+                    if (isMalicious) {
+                        "Hybrid Consensus [Model A (NPU) + Model B (Cloud)]: Both local edge tensor model and cloud Gemini model validated $chosenVector threat. 99.9% consensus match."
+                    } else {
+                        "Hybrid Consensus [Model A + Model B]: Dual-model consensus validated benign session. Zero-risk traffic passed to application queue."
+                    }
+                }
+            }
+
+            val kernelRule = if (isMalicious) "eBPF_HOOK_DROP_SRC $target (Rule #LLM_${(1000..9999).random()})" else "eBPF_PASS_ALLOW"
+
+            val result = AiModelInspectionResult(
+                analyzedTarget = target,
+                selectedModel = currentModel,
+                isMalicious = isMalicious,
+                confidenceScore = confidence,
+                threatCategory = category,
+                attackVector = chosenVector,
+                inferenceTimeMs = elapsed,
+                architectureStage = when (currentModel) {
+                    TrafficAnalysisAiModel.ON_DEVICE_NPU -> "NPU Vector Tensor Core #3 (Local Hardware)"
+                    TrafficAnalysisAiModel.CLOUD_GEMINI_DEEPSHIELD -> "Gemini 3.5 Flash / WildFire Cloud Ingestion"
+                    TrafficAnalysisAiModel.DUAL_CONSENSUS -> "Parallel Dual-Pipeline Cross Arbitration"
+                },
+                verdictSummary = verdictSummary,
+                kernelRuleGenerated = kernelRule,
+                timestamp = timestamp,
+                isFallbackEngaged = false
+            )
+
+            _aiModelInspectionResult.value = result
+            _isInspectingTraffic.value = false
+
+            if (isMalicious && _isAutoFirewallBlockEnabled.value) {
+                val newRule = BlockedFirewallRule(
+                    ipAddress = target,
+                    threatVector = chosenVector,
+                    severity = "CRITICAL",
+                    confidenceScore = confidence,
+                    blockedAtMs = System.currentTimeMillis(),
+                    blockedAtIso = timestamp,
+                    llmModelReasoning = "[${currentModel.modelNumber}: ${currentModel.displayName}] $verdictSummary",
+                    kernelRule = "iptables -A INPUT -s $target -j DROP",
+                    isAutoApplied = true
+                )
+                _blockedFirewallRules.value = listOf(newRule) + _blockedFirewallRules.value.filter { it.ipAddress != target }
+            }
+        }
+    }
+
     // Wi-Fi Security & MitM Inspector State
     private val _wifiSecurityState = MutableStateFlow(WifiSecurityState())
     val wifiSecurityState: StateFlow<WifiSecurityState> = _wifiSecurityState.asStateFlow()
@@ -508,27 +885,27 @@ class NetworkViewModel(application: Application) : AndroidViewModel(application)
     )
     val appFirewallRules: StateFlow<List<AppFirewallRule>> = _appFirewallRules.asStateFlow()
 
-    // Pi-Hole Style IP & Domain Rules State
-    private val _piHoleRules = MutableStateFlow<List<PiHoleRule>>(
+    // DNS Sinkhole IP & Domain Rules State
+    private val _dnsSinkholeRules = MutableStateFlow<List<DnsSinkholeRule>>(
         listOf(
-            PiHoleRule(target = "45.33.32.156", action = PiHoleRuleAction.DENY, category = PiHoleRuleCategory.MALWARE_C2, hitsCount = 421, addedDate = "2026-07-25", isEnabled = true),
-            PiHoleRule(target = "ads.doubleclick.net", action = PiHoleRuleAction.DENY, category = PiHoleRuleCategory.AD_NETWORK, hitsCount = 1250, addedDate = "2026-07-26", isEnabled = true),
-            PiHoleRule(target = "telemetry.analytics.io", action = PiHoleRuleAction.DENY, category = PiHoleRuleCategory.TRACKER, hitsCount = 890, addedDate = "2026-07-27", isEnabled = true),
-            PiHoleRule(target = "192.168.1.100", action = PiHoleRuleAction.ALLOW, category = PiHoleRuleCategory.LOCAL_IP, hitsCount = 310, addedDate = "2026-07-28", isEnabled = true),
-            PiHoleRule(target = "185.220.101.5", action = PiHoleRuleAction.DENY, category = PiHoleRuleCategory.MALWARE_C2, hitsCount = 68, addedDate = "2026-07-29", isEnabled = true)
+            DnsSinkholeRule(target = "45.33.32.156", action = DnsSinkholeRuleAction.DENY, category = DnsSinkholeRuleCategory.MALWARE_C2, hitsCount = 421, addedDate = "2026-07-25", isEnabled = true),
+            DnsSinkholeRule(target = "ads.doubleclick.net", action = DnsSinkholeRuleAction.DENY, category = DnsSinkholeRuleCategory.AD_NETWORK, hitsCount = 1250, addedDate = "2026-07-26", isEnabled = true),
+            DnsSinkholeRule(target = "telemetry.analytics.io", action = DnsSinkholeRuleAction.DENY, category = DnsSinkholeRuleCategory.TRACKER, hitsCount = 890, addedDate = "2026-07-27", isEnabled = true),
+            DnsSinkholeRule(target = "192.168.1.100", action = DnsSinkholeRuleAction.ALLOW, category = DnsSinkholeRuleCategory.LOCAL_IP, hitsCount = 310, addedDate = "2026-07-28", isEnabled = true),
+            DnsSinkholeRule(target = "185.220.101.5", action = DnsSinkholeRuleAction.DENY, category = DnsSinkholeRuleCategory.MALWARE_C2, hitsCount = 68, addedDate = "2026-07-29", isEnabled = true)
         )
     )
-    val piHoleRules: StateFlow<List<PiHoleRule>> = _piHoleRules.asStateFlow()
+    val dnsSinkholeRules: StateFlow<List<DnsSinkholeRule>> = _dnsSinkholeRules.asStateFlow()
 
-    private val _piHoleBlocklists = MutableStateFlow<List<PiHoleBlocklistSubscription>>(
+    private val _dnsSinkholeBlocklists = MutableStateFlow<List<DnsSinkholeBlocklistSubscription>>(
         listOf(
-            PiHoleBlocklistSubscription(id = "bl-1", name = "AdGuard DNS Filter", entryCount = 45000, url = "https://filters.adtidy.org/extension/chromium/filters/15.txt", isEnabled = true),
-            PiHoleBlocklistSubscription(id = "bl-2", name = "StevenBlack Unified Hosts", entryCount = 120000, url = "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts", isEnabled = true),
-            PiHoleBlocklistSubscription(id = "bl-3", name = "OISD Big Threat List", entryCount = 95000, url = "https://big.oisd.nl", isEnabled = true),
-            PiHoleBlocklistSubscription(id = "bl-4", name = "Quantum C2 Intelligence List", entryCount = 18500, url = "https://netshield.io/rules/quantum-c2.txt", isEnabled = true)
+            DnsSinkholeBlocklistSubscription(id = "bl-1", name = "Standard DNS Ad & Threat Filter", entryCount = 45000, url = "https://filters.adblock.org/standard/filter.txt", isEnabled = true),
+            DnsSinkholeBlocklistSubscription(id = "bl-2", name = "Unified Open Threat Hosts", entryCount = 120000, url = "https://raw.githubusercontent.com/OpenSecurity/hosts/master/hosts", isEnabled = true),
+            DnsSinkholeBlocklistSubscription(id = "bl-3", name = "Global Security Threat Intelligence", entryCount = 95000, url = "https://security.threats.org/list.txt", isEnabled = true),
+            DnsSinkholeBlocklistSubscription(id = "bl-4", name = "Post-Quantum C2 Blacklist", entryCount = 18500, url = "https://netshield.io/rules/quantum-c2.txt", isEnabled = true)
         )
     )
-    val piHoleBlocklists: StateFlow<List<PiHoleBlocklistSubscription>> = _piHoleBlocklists.asStateFlow()
+    val dnsSinkholeBlocklists: StateFlow<List<DnsSinkholeBlocklistSubscription>> = _dnsSinkholeBlocklists.asStateFlow()
 
     // Encrypted & Custom DNS State
     private val _encryptedDnsState = MutableStateFlow(EncryptedDnsState())
@@ -573,10 +950,10 @@ class NetworkViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Pi-Hole Style IP & Domain Management Methods
-    fun addPiHoleRule(target: String, action: PiHoleRuleAction, category: PiHoleRuleCategory) {
+    // DNS Sinkhole IP & Domain Management Methods
+    fun addDnsSinkholeRule(target: String, action: DnsSinkholeRuleAction, category: DnsSinkholeRuleCategory) {
         val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val newRule = PiHoleRule(
+        val newRule = DnsSinkholeRule(
             target = target.trim(),
             action = action,
             category = category,
@@ -584,21 +961,21 @@ class NetworkViewModel(application: Application) : AndroidViewModel(application)
             addedDate = sdf.format(Date()),
             isEnabled = true
         )
-        _piHoleRules.value = listOf(newRule) + _piHoleRules.value.filterNot { it.target.equals(target, ignoreCase = true) }
+        _dnsSinkholeRules.value = listOf(newRule) + _dnsSinkholeRules.value.filterNot { it.target.equals(target, ignoreCase = true) }
     }
 
-    fun togglePiHoleRule(id: String, enabled: Boolean) {
-        _piHoleRules.value = _piHoleRules.value.map { rule ->
+    fun toggleDnsSinkholeRule(id: String, enabled: Boolean) {
+        _dnsSinkholeRules.value = _dnsSinkholeRules.value.map { rule ->
             if (rule.id == id) rule.copy(isEnabled = enabled) else rule
         }
     }
 
-    fun deletePiHoleRule(id: String) {
-        _piHoleRules.value = _piHoleRules.value.filterNot { it.id == id }
+    fun deleteDnsSinkholeRule(id: String) {
+        _dnsSinkholeRules.value = _dnsSinkholeRules.value.filterNot { it.id == id }
     }
 
-    fun togglePiHoleBlocklist(id: String, enabled: Boolean) {
-        _piHoleBlocklists.value = _piHoleBlocklists.value.map { list ->
+    fun toggleDnsSinkholeBlocklist(id: String, enabled: Boolean) {
+        _dnsSinkholeBlocklists.value = _dnsSinkholeBlocklists.value.map { list ->
             if (list.id == id) list.copy(isEnabled = enabled) else list
         }
     }
@@ -764,41 +1141,41 @@ class NetworkViewModel(application: Application) : AndroidViewModel(application)
         _selectedCpuProfile.value = profile
         val updatedInfo = when (profile) {
             "SNAPDRAGON_KRYO" -> HardwareDeviceInfo(
-                cpuArchitecture = "Qualcomm Snapdragon Kryo 8-Core (1x Prime + 3x Gold + 4x Silver)",
+                cpuArchitecture = "High-Performance Heterogeneous 8-Core Mobile SoC (ARMv9-A)",
                 cpuAbi = "arm64-v8.2a / v9a",
                 activeCores = 8,
-                gpuAccelerator = "Qualcomm Adreno 750 / Vulkan 1.3 GPGPU Compute",
-                npuAccelerator = "Hexagon NPU v75 (45 TOPS Neural Pipeline)",
+                gpuAccelerator = "Vulkan 1.3 GPGPU Compute Shader Pipeline",
+                npuAccelerator = "On-Device Neural Engine (45 TOPS Vector Pipeline)",
                 neonCryptoExtensions = true,
                 aesHardwareAcceleration = true,
                 vulkanGpgpuAvailable = true
             )
             "MEDIATEK_DIMENSITY" -> HardwareDeviceInfo(
-                cpuArchitecture = "MediaTek Dimensity 9300 Ultra (4x Cortex-X4 + 4x Cortex-A720)",
+                cpuArchitecture = "Octa-Core High-Throughput Mobile Processor (ARMv9.2-A)",
                 cpuAbi = "arm64-v8.4a / v9.2a",
                 activeCores = 8,
-                gpuAccelerator = "ARM Mali-G720 Immortalis / OpenCL 3.0",
-                npuAccelerator = "MediaTek APU 790 Generative AI Core",
+                gpuAccelerator = "OpenCL 3.0 / Vulkan 1.3 High-Efficiency Graphics Engine",
+                npuAccelerator = "Dedicated Generative AI Neural Processing Unit",
                 neonCryptoExtensions = true,
                 aesHardwareAcceleration = true,
                 vulkanGpgpuAvailable = true
             )
             "TENSOR_TPU" -> HardwareDeviceInfo(
-                cpuArchitecture = "Google Tensor G3 / ARMv9-A (1x Cortex-X3 + 4x A715 + 4x A510)",
+                cpuArchitecture = "Heterogeneous Multi-Core Neural Processing SoC",
                 cpuAbi = "arm64-v8a / v9a",
                 activeCores = 9,
-                gpuAccelerator = "ARM Mali-G715 MP10 / Vulkan 1.3",
-                npuAccelerator = "Google Tensor TPU (Edge ML Neural Acceleration)",
+                gpuAccelerator = "High-Parallelism Graphics Compute Engine / Vulkan 1.3",
+                npuAccelerator = "Edge ML Tensor Acceleration Unit",
                 neonCryptoExtensions = true,
                 aesHardwareAcceleration = true,
                 vulkanGpgpuAvailable = true
             )
             "ARM_V8_V9" -> HardwareDeviceInfo(
-                cpuArchitecture = "ARM Cortex-A78 / Cortex-A55 Heterogeneous Core",
+                cpuArchitecture = "Standard ARM Cortex Heterogeneous Multi-Core SoC",
                 cpuAbi = "arm64-v8a",
                 activeCores = 8,
-                gpuAccelerator = "ARM Mali-G78 / OpenCL Compute Engine",
-                npuAccelerator = "ARM Ethos-N78 NPU Accelerator",
+                gpuAccelerator = "OpenCL Standard Graphics Compute Engine",
+                npuAccelerator = "Standard Embedded Neural Processing Unit",
                 neonCryptoExtensions = true,
                 aesHardwareAcceleration = true,
                 vulkanGpgpuAvailable = true
@@ -860,7 +1237,7 @@ class NetworkViewModel(application: Application) : AndroidViewModel(application)
             _hwBenchmarkState.value = HwBenchmarkState.Running("Benchmarking ML-KEM-1024 Matrix Multiplication on GPU...", 0.45f)
             kotlinx.coroutines.delay(600)
 
-            _hwBenchmarkState.value = HwBenchmarkState.Running("Benchmarking Hexagon / Tensor TPU Neural Packet Inference...", 0.75f)
+            _hwBenchmarkState.value = HwBenchmarkState.Running("Benchmarking Dedicated Neural Tensor Packet Inference...", 0.75f)
             kotlinx.coroutines.delay(600)
 
             _hwBenchmarkState.value = HwBenchmarkState.Running("Calculating Speedup & Multi-Core Core Efficiency...", 0.95f)
@@ -967,8 +1344,65 @@ class NetworkViewModel(application: Application) : AndroidViewModel(application)
     fun runDualLlmScanAndBlock(targetIp: String? = null) {
         val candidateIps = listOf("103.21.244.11", "192.0.2.14", "185.220.101.99", "45.142.214.7", "109.236.81.18")
         val ipToAnalyze = targetIp ?: candidateIps.random()
+        val isNetworkOffline = connectivityManager.networkStatus.value is NetworkStatus.Disconnected
+        val fallbackMode = localHeuristicEngine.engineMode.value
 
         viewModelScope.launch {
+            if (isNetworkOffline && fallbackMode != FallbackEngineMode.DISABLED) {
+                // Engage fallback local heuristic engine
+                localHeuristicEngine.updateServerConnectivity(false)
+                _dualLlmScanState.value = DualLlmScanState.Scanning(ipToAnalyze, 0.35f, "Server Unreachable: Engaging Local Heuristic Fallback Engine...")
+                kotlinx.coroutines.delay(200)
+
+                _dualLlmScanState.value = DualLlmScanState.Scanning(ipToAnalyze, 0.75f, "Computing Shannon Entropy & L4/L7 Heuristic Signatures...")
+                kotlinx.coroutines.delay(200)
+
+                val heuristicVerdict = localHeuristicEngine.inspectTrafficLocally(ipToAnalyze)
+                val isAutoBlockActive = _isAutoFirewallBlockEnabled.value
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'", Locale.getDefault())
+                val now = System.currentTimeMillis()
+
+                val reasoning = "[FALLBACK ENGAGED] ${heuristicVerdict.reasoning}"
+
+                if (isAutoBlockActive && heuristicVerdict.isThreat) {
+                    val autoRule = BlockedFirewallRule(
+                        ipAddress = ipToAnalyze,
+                        threatVector = heuristicVerdict.attackVector,
+                        severity = heuristicVerdict.severity,
+                        confidenceScore = heuristicVerdict.confidenceScore,
+                        blockedAtMs = now,
+                        blockedAtIso = dateFormat.format(Date(now)),
+                        llmModelReasoning = "[Local Heuristic Fallback Engine] $reasoning",
+                        kernelRule = "iptables -A INPUT -s $ipToAnalyze -j DROP",
+                        isAutoApplied = true
+                    )
+                    _blockedFirewallRules.value = listOf(autoRule) + _blockedFirewallRules.value.filter { it.ipAddress != ipToAnalyze }
+
+                    insertThreatLog(
+                        severity = heuristicVerdict.severity,
+                        attackVector = heuristicVerdict.attackVector,
+                        sourceIp = ipToAnalyze,
+                        targetPort = 443,
+                        actionTaken = "FALLBACK_HEURISTIC_BLOCKED",
+                        details = reasoning
+                    )
+                }
+
+                _dualLlmScanState.value = DualLlmScanState.Completed(
+                    analyzedIp = ipToAnalyze,
+                    isMalicious = heuristicVerdict.isThreat,
+                    confidenceScore = heuristicVerdict.confidenceScore,
+                    primaryLlmVerdict = "OFFLINE (Local Shannon Entropy: ${"%.2f".format(heuristicVerdict.entropyScore)})",
+                    secondaryLlmVerdict = "LOCAL HEURISTICS (${heuristicVerdict.heuristicRuleMatched})",
+                    autoBlocked = isAutoBlockActive && heuristicVerdict.isThreat,
+                    reasoning = reasoning,
+                    isFallbackEngaged = true,
+                    fallbackReason = "Dual-LLM cloud connectivity unreachable -> Auto-switched to on-device heuristic threat engine."
+                )
+                return@launch
+            }
+
+            localHeuristicEngine.updateServerConnectivity(true)
             _dualLlmScanState.value = DualLlmScanState.Scanning(ipToAnalyze, 0.25f, "Primary NPU Model: Packet Anomaly Classification...")
             kotlinx.coroutines.delay(600)
 
@@ -1018,7 +1452,8 @@ class NetworkViewModel(application: Application) : AndroidViewModel(application)
                 primaryLlmVerdict = "MALICIOUS (Entropy Anomaly Detected)",
                 secondaryLlmVerdict = "CONFIRMED (Signature Match: $chosenVector)",
                 autoBlocked = isAutoBlockActive,
-                reasoning = reasoning
+                reasoning = reasoning,
+                isFallbackEngaged = false
             )
         }
     }

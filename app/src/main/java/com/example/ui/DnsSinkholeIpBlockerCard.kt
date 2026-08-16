@@ -21,21 +21,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Domain
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.SwitchAccessShortcut
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -72,10 +66,10 @@ import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PiHoleIpBlockerCard(
-    piHoleRules: List<PiHoleRule> = emptyList(),
-    blocklists: List<PiHoleBlocklistSubscription> = emptyList(),
-    onAddRule: (target: String, action: PiHoleRuleAction, category: PiHoleRuleCategory) -> Unit = { _, _, _ -> },
+fun DnsSinkholeIpBlockerCard(
+    dnsSinkholeRules: List<DnsSinkholeRule> = emptyList(),
+    blocklists: List<DnsSinkholeBlocklistSubscription> = emptyList(),
+    onAddRule: (target: String, action: DnsSinkholeRuleAction, category: DnsSinkholeRuleCategory) -> Unit = { _, _, _ -> },
     onToggleRule: (id: String, enabled: Boolean) -> Unit = { _, _ -> },
     onDeleteRule: (id: String) -> Unit = {},
     onToggleBlocklist: (id: String, enabled: Boolean) -> Unit = { _, _ -> }
@@ -84,21 +78,21 @@ fun PiHoleIpBlockerCard(
     var showAddRuleDialog by remember { mutableStateOf(false) }
     var showBlocklistsSection by remember { mutableStateOf(false) }
 
-    val filteredRules = piHoleRules.filter { rule ->
+    val filteredRules = dnsSinkholeRules.filter { rule ->
         when (selectedActionFilter) {
-            "DENY" -> rule.action == PiHoleRuleAction.DENY
-            "ALLOW" -> rule.action == PiHoleRuleAction.ALLOW
+            "DENY" -> rule.action == DnsSinkholeRuleAction.DENY
+            "ALLOW" -> rule.action == DnsSinkholeRuleAction.ALLOW
             else -> true
         }
     }
 
-    val totalBlockedHits = piHoleRules.filter { it.action == PiHoleRuleAction.DENY }.sumOf { it.hitsCount }
+    val totalBlockedHits = dnsSinkholeRules.filter { it.action == DnsSinkholeRuleAction.DENY }.sumOf { it.hitsCount }
     val activeBlocklistEntries = blocklists.filter { it.isEnabled }.sumOf { it.entryCount }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("pi_hole_ip_blocker_card"),
+            .testTag("dns_sinkhole_ip_blocker_card"),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
         shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
@@ -120,7 +114,7 @@ fun PiHoleIpBlockerCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Dns,
-                            contentDescription = "Pi-hole IP & Domain Sinkhole",
+                            contentDescription = "DNS Sinkhole & Filter",
                             tint = Color(0xFFF472B6),
                             modifier = Modifier.size(22.dp)
                         )
@@ -128,14 +122,14 @@ fun PiHoleIpBlockerCard(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "Pi-hole IP & Domain Blocker",
+                            text = "DNS Sinkhole & IP Blocker",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
                         )
                         Text(
-                            text = "DNS Sinkhole & Blacklist/Whitelist Filter",
+                            text = "Domain Sinkhole & Open Threat Filter",
                             style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF94A3B8))
                         )
                     }
@@ -143,7 +137,7 @@ fun PiHoleIpBlockerCard(
 
                 OutlinedButton(
                     onClick = { showAddRuleDialog = true },
-                    modifier = Modifier.testTag("add_pihole_ip_rule_button"),
+                    modifier = Modifier.testTag("add_dns_sinkhole_ip_rule_button"),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF472B6)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEC4899))
@@ -156,7 +150,7 @@ fun PiHoleIpBlockerCard(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFF1E293B))
 
-            // Pi-hole Dashboard Stats Grid
+            // DNS Sinkhole Dashboard Stats Grid
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -217,7 +211,7 @@ fun PiHoleIpBlockerCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.ListAlt, contentDescription = null, tint = Color(0xFFF472B6), modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Pi-hole Blocklist Subscriptions (${blocklists.count { it.isEnabled }}/${blocklists.size} Active)", style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold))
+                    Text("Threat Blocklist Subscriptions (${blocklists.count { it.isEnabled }}/${blocklists.size} Active)", style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold))
                 }
                 Text(if (showBlocklistsSection) "Hide" else "Show", color = Color(0xFF94A3B8), fontSize = 12.sp)
             }
@@ -287,7 +281,7 @@ fun PiHoleIpBlockerCard(
                                 containerColor = Color(0xFF1E293B),
                                 labelColor = Color(0xFF94A3B8)
                             ),
-                            modifier = Modifier.testTag("pihole_filter_$filter")
+                            modifier = Modifier.testTag("dns_sinkhole_filter_$filter")
                         )
                     }
                 }
@@ -309,7 +303,7 @@ fun PiHoleIpBlockerCard(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     filteredRules.forEach { rule ->
-                        PiHoleRuleRowItem(
+                        DnsSinkholeRuleRowItem(
                             rule = rule,
                             onToggle = { enabled -> onToggleRule(rule.id, enabled) },
                             onDelete = { onDeleteRule(rule.id) }
@@ -321,7 +315,7 @@ fun PiHoleIpBlockerCard(
     }
 
     if (showAddRuleDialog) {
-        AddPiHoleRuleDialog(
+        AddDnsSinkholeRuleDialog(
             onDismiss = { showAddRuleDialog = false },
             onAdd = { target, action, category ->
                 onAddRule(target, action, category)
@@ -332,12 +326,12 @@ fun PiHoleIpBlockerCard(
 }
 
 @Composable
-fun PiHoleRuleRowItem(
-    rule: PiHoleRule,
+fun DnsSinkholeRuleRowItem(
+    rule: DnsSinkholeRule,
     onToggle: (Boolean) -> Unit,
     onDelete: () -> Unit
 ) {
-    val isDeny = rule.action == PiHoleRuleAction.DENY
+    val isDeny = rule.action == DnsSinkholeRuleAction.DENY
     val badgeColor = if (isDeny) Color(0xFFEF4444) else Color(0xFF10B981)
 
     OutlinedCard(
@@ -416,13 +410,13 @@ fun PiHoleRuleRowItem(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AddPiHoleRuleDialog(
+fun AddDnsSinkholeRuleDialog(
     onDismiss: () -> Unit,
-    onAdd: (target: String, action: PiHoleRuleAction, category: PiHoleRuleCategory) -> Unit
+    onAdd: (target: String, action: DnsSinkholeRuleAction, category: DnsSinkholeRuleCategory) -> Unit
 ) {
     var target by remember { mutableStateOf("") }
-    var action by remember { mutableStateOf(PiHoleRuleAction.DENY) }
-    var category by remember { mutableStateOf(PiHoleRuleCategory.MALWARE_C2) }
+    var action by remember { mutableStateOf(DnsSinkholeRuleAction.DENY) }
+    var category by remember { mutableStateOf(DnsSinkholeRuleCategory.MALWARE_C2) }
 
     val tfColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = Color.White,
@@ -442,7 +436,7 @@ fun AddPiHoleRuleDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(imageVector = Icons.Default.Dns, contentDescription = null, tint = Color(0xFFF472B6))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Add Pi-hole IP / Domain Rule", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White))
+                Text("Add DNS Sinkhole Rule", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White))
             }
         },
         text = {
@@ -450,7 +444,7 @@ fun AddPiHoleRuleDialog(
                 OutlinedTextField(
                     value = target,
                     onValueChange = { target = it },
-                    label = { Text("IP Address or Domain (e.g. 45.33.32.156 or ads.google.com)") },
+                    label = { Text("IP Address or Domain (e.g. 45.33.32.156 or example-ad-server.com)") },
                     colors = tfColors,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -458,14 +452,14 @@ fun AddPiHoleRuleDialog(
                 Text("Rule Action:", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF94A3B8)))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
-                        selected = action == PiHoleRuleAction.DENY,
-                        onClick = { action = PiHoleRuleAction.DENY },
+                        selected = action == DnsSinkholeRuleAction.DENY,
+                        onClick = { action = DnsSinkholeRuleAction.DENY },
                         label = { Text("DENY (BLOCK)", fontSize = 11.sp) },
                         colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(0xFFEF4444), selectedLabelColor = Color.White)
                     )
                     FilterChip(
-                        selected = action == PiHoleRuleAction.ALLOW,
-                        onClick = { action = PiHoleRuleAction.ALLOW },
+                        selected = action == DnsSinkholeRuleAction.ALLOW,
+                        onClick = { action = DnsSinkholeRuleAction.ALLOW },
                         label = { Text("ALLOW (BYPASS)", fontSize = 11.sp) },
                         colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(0xFF10B981), selectedLabelColor = Color.White)
                     )
@@ -477,7 +471,7 @@ fun AddPiHoleRuleDialog(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    PiHoleRuleCategory.values().forEach { cat ->
+                    DnsSinkholeRuleCategory.values().forEach { cat ->
                         FilterChip(
                             selected = category == cat,
                             onClick = { category = cat },
@@ -502,7 +496,7 @@ fun AddPiHoleRuleDialog(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEC4899))
             ) {
-                Text("Add Pi-hole Rule")
+                Text("Add Rule")
             }
         },
         dismissButton = {
