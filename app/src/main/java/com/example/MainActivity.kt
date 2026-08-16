@@ -124,6 +124,9 @@ import com.example.ui.QuantumStatusBarNotificationCard
 import com.example.ui.NgfwEnterpriseCommandCenterCard
 import com.example.ui.DpuAcceleratedSecurityCard
 import com.example.ui.QuantumHandshakeSpeedTimelineCard
+import com.example.ui.RealtimeNetworkThreatRechartsDashboardCard
+import com.example.ui.QuantumEntropyGaugeMonitorCard
+import com.example.ui.MemoryLeakDetectorCard
 import com.example.ui.AiModelToggleDashboardCard
 import com.example.ui.AiEngineOperationalHealthCard
 import com.example.network.QuantumTunnelStatusManager
@@ -403,6 +406,16 @@ fun NetShieldApp(
                     useJitter = useJitter,
                     stats = stats
                 )
+            }
+
+            // Real-Time Recharts Visual Network Traffic & Threat Detection Dashboard
+            item {
+                RealtimeNetworkThreatRechartsDashboardCard()
+            }
+
+            // Real-Time Quantum-Safe Entropy & Handshake Strength Gauge Monitor
+            item {
+                QuantumEntropyGaugeMonitorCard()
             }
 
             // Security Overview Dashboard: Quantum Risk Index & Real-Time Traffic Overlay
