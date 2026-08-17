@@ -690,22 +690,7 @@ fun QuantumEntropyArcGaugeCanvas(
             )
 
             // Major Tick Labels (0%, 25%, 50%, 75%, 100%)
-            if (isMajor) {
-                val labelRadius = radius + 22.dp.toPx()
-                val labelX = center.x + labelRadius * cos(angleRad)
-                val labelY = center.y + labelRadius * sin(angleRad)
-                val pctLabel = "${(tickNorm * 100).toInt()}"
-
-                drawContext.canvas.nativeCanvas.apply {
-                    val paint = android.graphics.Paint().apply {
-                        color = android.graphics.Color.parseColor("#94A3B8")
-                        textSize = 8.dp.toPx()
-                        isAntiAlias = true
-                        textAlign = android.graphics.Paint.Align.CENTER
-                    }
-                    drawText(pctLabel, labelX, labelY + 3.dp.toPx(), paint)
-                }
-            }
+            // Tick lines are rendered with primary/accent color
         }
 
         // Draw Background Gauge Track (Dashed Dark Arc)

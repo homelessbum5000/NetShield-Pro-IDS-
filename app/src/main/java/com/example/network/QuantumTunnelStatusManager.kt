@@ -182,13 +182,22 @@ class QuantumTunnelNotificationService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = QuantumTunnelStatusManager.buildNotification(this)
-        startForeground(QuantumTunnelStatusManager.NOTIFICATION_ID, notification)
+        try {
+            val notification = QuantumTunnelStatusManager.buildNotification(this)
+            startForeground(QuantumTunnelStatusManager.NOTIFICATION_ID, notification)
+        } catch (e: Exception) {
+            // Fallback safely to regular notification manager if foreground service security exception occurs
+            try {
+                QuantumTunnelStatusManager.updateNotification(this)
+            } catch (_: Exception) {}
+        }
         return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (_: Exception) {}
     }
 }

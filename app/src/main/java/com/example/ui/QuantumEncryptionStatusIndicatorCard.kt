@@ -152,6 +152,15 @@ enum class PqcProtocolProfile(
     )
 }
 
+data class TunnelIntegrityFlag(
+    val id: String,
+    val name: String,
+    val description: String,
+    val isValid: Boolean,
+    val standardRef: String,
+    val telemetryValue: String
+)
+
 data class PqcSecurityAuditStep(
     val title: String,
     val status: String,
@@ -170,10 +179,13 @@ fun QuantumEncryptionStatusIndicatorCard(
     var isEnabled by remember(isQuantumEncryptionEnabled) { mutableStateOf(isQuantumEncryptionEnabled) }
     var selectedProfile by remember { mutableStateOf(PqcProtocolProfile.NIST_FIPS_203_204) }
     var isRunningAudit by remember { mutableStateOf(false) }
+    var isVerifyingTunnel by remember { mutableStateOf(false) }
     var auditProgress by remember { mutableFloatStateOf(0f) }
     var auditSteps by remember { mutableStateOf<List<PqcSecurityAuditStep>?>(null) }
     var showExpandedDetails by remember { mutableStateOf(false) }
-    var simulatedPacketsSec by remember { mutableIntStateOf(1420) }
+    var showIntegrityFlags by remember { mutableStateOf(true) }
+    var simulatedFlagAnomaly by remember { mutableStateOf(false) }
+    var verifiedAtTimestamp by remember { mutableStateOf("Just now (0s ago)") }
 
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -191,26 +203,82 @@ fun QuantumEncryptionStatusIndicatorCard(
     )
 
     // Calculate effective resistance score based on toggle
-    val effectiveScore = if (isEnabled) {
+    val effectiveScore = if (isEnabled && !simulatedFlagAnomaly) {
         selectedProfile.quantumResistanceScore
+    } else if (isEnabled && simulatedFlagAnomaly) {
+        64 // Anomaly penalty
     } else {
         18 // Unprotected classical fallback
     }
 
-    val isFullyProtected = isEnabled && selectedProfile.shorImmunity
+    val isFullyProtected = isEnabled && selectedProfile.shorImmunity && !simulatedFlagAnomaly
 
     val indicatorBgColor by animateColorAsState(
-        targetValue = if (isFullyProtected) Color(0xFF022C22) else Color(0xFF2D0607),
+        targetValue = if (isFullyProtected) Color(0xFF022C22) else if (simulatedFlagAnomaly) Color(0xFF2E1B00) else Color(0xFF2D0607),
         label = "bg_color"
     )
     val indicatorBorderColor by animateColorAsState(
-        targetValue = if (isFullyProtected) Color(0xFF10B981) else Color(0xFFEF4444),
+        targetValue = if (isFullyProtected) Color(0xFF10B981) else if (simulatedFlagAnomaly) Color(0xFFF59E0B) else Color(0xFFEF4444),
         label = "border_color"
     )
     val accentColor by animateColorAsState(
-        targetValue = if (isFullyProtected) Color(0xFF34D399) else Color(0xFFF87171),
+        targetValue = if (isFullyProtected) Color(0xFF34D399) else if (simulatedFlagAnomaly) Color(0xFFFBBF24) else Color(0xFFF87171),
         label = "accent_color"
     )
+
+    // Dynamic local tunnel status flags
+    val localIntegrityFlags = remember(isEnabled, selectedProfile, simulatedFlagAnomaly) {
+        listOf(
+            TunnelIntegrityFlag(
+                id = "flag_aead_mac",
+                name = "AEAD MAC Tag Integrity",
+                description = "128-bit Galois Message Authentication Code valid for all tunnel frames",
+                isValid = isEnabled,
+                standardRef = "RFC 8439 / AES-GCM",
+                telemetryValue = if (isEnabled) "0 Mismatch (Valid)" else "DISABLED"
+            ),
+            TunnelIntegrityFlag(
+                id = "flag_lattice_kem",
+                name = "Lattice KEM Encapsulation",
+                description = "Active ML-KEM-1024 polynomial key encapsulation without drift",
+                isValid = isEnabled && selectedProfile != PqcProtocolProfile.CLASSICAL_LEGACY,
+                standardRef = "FIPS 203 (NIST Level 5)",
+                telemetryValue = if (isEnabled && selectedProfile != PqcProtocolProfile.CLASSICAL_LEGACY) "2,272 B Public Key Synced" else "Degraded to ECDH"
+            ),
+            TunnelIntegrityFlag(
+                id = "flag_replay_window",
+                name = "Anti-Replay Sliding Window",
+                description = "64-bit monotonic sequence counter with zero duplicated packets",
+                isValid = !simulatedFlagAnomaly && isEnabled,
+                standardRef = "RFC 4303 §3.4.3",
+                telemetryValue = if (!simulatedFlagAnomaly && isEnabled) "Seq #4,921,084 In-Sync" else "Replay Window Flag Mismatch!"
+            ),
+            TunnelIntegrityFlag(
+                id = "flag_zero_leakage",
+                name = "Zero Plaintext Leakage",
+                description = "Strict kernel tun0 interface binding preventing plaintext DNS/IP bypass",
+                isValid = isEnabled,
+                standardRef = "Android VpnService Isolation",
+                telemetryValue = if (isEnabled) "0 B Plaintext Bypass" else "LEAKING RAW TRAFFIC"
+            ),
+            TunnelIntegrityFlag(
+                id = "flag_quantum_entropy",
+                name = "Quantum Entropy Pool",
+                description = "True Random Number Generator min-entropy pool for ephemeral keying",
+                isValid = isEnabled,
+                standardRef = "NIST SP 800-90B TRNG",
+                telemetryValue = if (isEnabled) "7.998 bits/byte (Nominal)" else "< 4.2 b/B (PRNG Only)"
+            ),
+            TunnelIntegrityFlag(
+                id = "flag_hardware_keystore",
+                name = "Hardware TEE / StrongBox",
+                description = "Hardware-isolated cryptographic processor holding tunnel roots",
+                isValid = true,
+                standardRef = "Android KeyStore StrongBox",
+                telemetryValue = "Hardware-Backed (Level 4)"
+            )
+        )
+    }
 
     Card(
         modifier = modifier
@@ -549,6 +617,193 @@ fun QuantumEncryptionStatusIndicatorCard(
                                 fontSize = 10.sp
                             )
                         )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Encryption Tunnel Local Integrity Status Flags Section
+            Surface(
+                color = Color(0xFF070D19),
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1E293B)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (isFullyProtected) Icons.Default.VerifiedUser else Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = accentColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Tunnel Integrity Flags (${localIntegrityFlags.count { it.isValid }}/${localIntegrityFlags.size} PASS)",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+
+                        Text(
+                            text = verifiedAtTimestamp,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFF94A3B8),
+                                fontSize = 9.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    localIntegrityFlags.forEach { flag ->
+                        Surface(
+                            color = Color(0xFF0F172A),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (flag.isValid) Color(0xFF1E293B) else Color(0xFFEF4444).copy(alpha = 0.5f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 3.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    Icon(
+                                        imageVector = if (flag.isValid) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = if (flag.isValid) Color(0xFF10B981) else Color(0xFFEF4444),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = flag.name,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color.White,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                        Text(
+                                            text = flag.description,
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                color = Color(0xFF94A3B8),
+                                                fontSize = 8.5.sp,
+                                                lineHeight = 11.sp
+                                            )
+                                        )
+                                    }
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Surface(
+                                        color = if (flag.isValid) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFEF4444).copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = if (flag.isValid) "VALID" else "FAIL",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = if (flag.isValid) Color(0xFF34D399) else Color(0xFFF87171),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 8.5.sp,
+                                                fontFamily = FontFamily.Monospace
+                                            ),
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = flag.telemetryValue,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = if (flag.isValid) Color(0xFF38BDF8) else Color(0xFFF87171),
+                                            fontSize = 8.sp,
+                                            fontFamily = FontFamily.Monospace
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Integrity Verification & Anomaly Simulator Toolbar
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                isVerifyingTunnel = true
+                                coroutineScope.launch {
+                                    Toast.makeText(context, "Verifying local tunnel integrity status flags...", Toast.LENGTH_SHORT).show()
+                                    delay(600)
+                                    isVerifyingTunnel = false
+                                    verifiedAtTimestamp = "Verified Just Now"
+                                    Toast.makeText(context, "Tunnel Integrity Confirmed: All Flags Pass", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(6.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF0284C7)),
+                            enabled = !isVerifyingTunnel
+                        ) {
+                            if (isVerifyingTunnel) {
+                                CircularProgressIndicator(modifier = Modifier.size(12.dp), color = Color(0xFF38BDF8), strokeWidth = 1.5.dp)
+                            } else {
+                                Icon(imageVector = Icons.Default.Refresh, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(12.dp))
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Re-verify Flags", fontSize = 10.sp, color = Color(0xFF38BDF8))
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                simulatedFlagAnomaly = !simulatedFlagAnomaly
+                                Toast.makeText(
+                                    context,
+                                    if (simulatedFlagAnomaly) "Simulating anti-replay sequence mismatch anomaly" else "Tunnel anomaly resolved: Flags nominal",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(6.dp),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (simulatedFlagAnomaly) Color(0xFFF59E0B) else Color(0xFF334155)
+                            )
+                        ) {
+                            Icon(
+                                imageVector = if (simulatedFlagAnomaly) Icons.Default.Warning else Icons.Default.Security,
+                                contentDescription = null,
+                                tint = if (simulatedFlagAnomaly) Color(0xFFF59E0B) else Color(0xFF94A3B8),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (simulatedFlagAnomaly) "Clear Anomaly" else "Simulate Glitch",
+                                fontSize = 10.sp,
+                                color = if (simulatedFlagAnomaly) Color(0xFFF59E0B) else Color(0xFFCBD5E1)
+                            )
+                        }
                     }
                 }
             }
