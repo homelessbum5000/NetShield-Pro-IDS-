@@ -24,6 +24,12 @@ android {
     ndk {
       abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
     }
+
+    // NetShield backend config. The Secrets Gradle Plugin overrides these from
+    // .env / .env.example at build time. Defaults point at the FastAPI backend
+    // on the dev host as seen from the Android emulator (10.0.2.2).
+    buildConfigField("String", "NETSHIELD_BACKEND_URL", "\"http://10.0.2.2:8000/\"")
+    buildConfigField("String", "NETSHIELD_USE_MOCK_NETWORK", "\"false\"")
   }
 
   signingConfigs {

@@ -2,6 +2,7 @@ package com.example.network
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.example.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,8 +14,25 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    private const val QUANTUM_BASE_URL = "http://quantum.onion:9000/"
-    private const val GATEWAY_BASE_URL = "http://gateway.onion/"
+    // Real backend URL injected from .env via the Secrets Gradle Plugin
+    // (NETSHIELD_BACKEND_URL). Use https:// in production. Default points at the
+    // FastAPI backend on the dev host as seen from the Android emulator
+    // (10.0.2.2 == host loopback).
+    private fun normalizeBaseUrl(url: String): String =
+        if (url.endsWith("/")) url else "$url/"
+
+    private val BACKEND_BASE_URL: String = normalizeBaseUrl(
+        BuildConfig.NETSHIELD_BACKEND_URL.takeIf { it.isNotBlank() }
+            ?: "http://10.0.2.2:8000/"
+    )
+
+    // Mock simulator is opt-in via NETSHIELD_USE_MOCK_NETWORK so debug builds
+    // can hit the real backend by default (set to "true" to restore mock data).
+    private val USE_MOCK_NETWORK: Boolean =
+        BuildConfig.NETSHIELD_USE_MOCK_NETWORK.equals("true", ignoreCase = true)
+
+    private val QUANTUM_BASE_URL = BACKEND_BASE_URL
+    private val GATEWAY_BASE_URL = BACKEND_BASE_URL
 
     private val _retryLogs = MutableStateFlow<List<RetryLogEntry>>(emptyList())
     val retryLogs: StateFlow<List<RetryLogEntry>> = _retryLogs.asStateFlow()
@@ -28,7 +46,9 @@ object RetrofitClient {
         _retryLogs.value = currentList
     }
 
-    // Shared Simulation Interceptor for demo & testing resilience
+    // Shared Simulation Interceptor — DEBUG ONLY. In release builds the app
+    // talks to the real backend (BACKEND_BASE_URL) and real responses flow
+    // through the backoff/retry interceptor instead of canned mock data.
     val mockSimulator = MockNetworkSimulationInterceptor()
 
     // Exponential Backoff Interceptor for Quantum Server
@@ -59,22 +79,24 @@ object RetrofitClient {
         .addLast(KotlinJsonAdapterFactory())
         .build()
 
-    // OkHttpClient specifically configured with exponential backoff for Quantum Server
+    // OkHttpClient for the Quantum Server. The mock simulator is installed only
+    // in debug builds so release builds hit the real backend and actually
+    // exercise the exponential backoff / retry logic.
     val quantumOkHttpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
-        .addInterceptor(mockSimulator)
+        .apply { if (USE_MOCK_NETWORK) addInterceptor(mockSimulator) }
         .addInterceptor(quantumBackoffInterceptor)
         .addInterceptor(loggingInterceptor)
         .build()
 
-    // OkHttpClient specifically configured with exponential backoff for Gateway Server
+    // OkHttpClient for the Gateway Server (same opt-in mock gating).
     val gatewayOkHttpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
-        .addInterceptor(mockSimulator)
+        .apply { if (USE_MOCK_NETWORK) addInterceptor(mockSimulator) }
         .addInterceptor(gatewayBackoffInterceptor)
         .addInterceptor(loggingInterceptor)
         .build()

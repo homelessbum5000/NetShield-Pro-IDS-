@@ -12,18 +12,18 @@ interface QuantumApiService {
 
     @POST("quantum/random")
     suspend fun getRandomBytes(
-        @Header("Authorization") authHeader: String = "Bearer quantum_token",
+        @Header("Authorization") authHeader: String = "",
         @Body request: QuantumRandomRequest
     ): Response<QuantumRandomResponse>
 
     @POST("quantum/keygen")
     suspend fun generateKyberKeys(
-        @Header("Authorization") authHeader: String = "Bearer quantum_token"
+        @Header("Authorization") authHeader: String = ""
     ): Response<QuantumKeyGenResponse>
 
     @POST("quantum/anomaly")
     suspend fun scoreAnomaly(
-        @Header("Authorization") authHeader: String = "Bearer quantum_token",
+        @Header("Authorization") authHeader: String = "",
         @Body request: QuantumAnomalyRequest
     ): Response<QuantumAnomalyResponse>
 }
@@ -34,7 +34,7 @@ interface GatewayApiService {
 
     @POST("gateway/ingest")
     suspend fun ingestBatch(
-        @Header("Authorization") authHeader: String = "Bearer gateway_token",
+        @Header("Authorization") authHeader: String = "",
         @Body request: EncryptedIDSRequest
     ): Response<GatewayIngestResponse>
 }
